@@ -12,4 +12,4 @@ def create_main_blueprint():
     return main_blueprint
 
 def show_index_page():
-    return make_response(render_template('index.html', page_title='IP地址查询', assert_url='index'))
+    return make_response(render_template('index.html', page_title='实时状态', assert_url='index'))
