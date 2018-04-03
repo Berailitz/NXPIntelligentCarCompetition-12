@@ -26,4 +26,8 @@ function update_status() {
       })
 }
 
-export {update_status};
+function update_picture() {
+  $('#webcamera')[0].src = '/video_feed';
+}
+
+export {update_status, update_picture};
