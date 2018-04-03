@@ -1,0 +1,48 @@
+{% extends "layout.html" %}
+{% block main_div %}
+    <div id="main-div" class="mdl-grid">
+    <div id="video-card" class="mdl-card mdl-shadow--2dp controller-card">
+            <div class="mdl-card__title mdl-color--primary mdl-color-text--white">
+                <h2 id="video-table-title" class="mdl-card__title-text">视频</h2>
+            </div>
+            <div id="video-card-supporting-text" class="mdl-card__supporting-text">
+                <img id="webcamera" src="/video_feed">
+            </div>
+            <div class="mdl-card__actions mdl-card--border">
+                <button id="update-button" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" onclick="update_status();">刷新</button>
+            </div>
+        </div>
+
+        <div id="status-card" class="mdl-card mdl-shadow--2dp controller-card">
+            <div class="mdl-card__title mdl-color--primary mdl-color-text--white">
+                <h2 id="status-table-title" class="mdl-card__title-text">更新中...</h2>
+            </div>
+            <div id="status-card-supporting-text" class="mdl-card__supporting-text">
+                <table id="status-table" class="mdl-data-table mdl-js-data-table mdl-shadow--2dp">
+                    <thead>
+                        <tr>
+                            <th class="mdl-data-table__header--sorted-ascending">项目</th>
+                            <th>数据</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="mdl-card__actions mdl-card--border">
+                <button id="update-button" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" onclick="update_status();">刷新</button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block page_footer %}
+    <script type="module">
+        import { update_status } from "/static/js/{{ assert_url }}.js";
+        window.onload = function(){
+            'use strict';
+            $('#update-button')[0].addEventListener('click', function () { update_status();});
+            update_status();
+        };
+    </script>
+{% endblock %}
