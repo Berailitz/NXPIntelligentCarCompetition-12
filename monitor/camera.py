@@ -96,8 +96,8 @@ class Camera(object):
             # if there hasn't been any clients asking for frames in
             # the last 10 seconds then stop the thread
             if time.time() - Camera.last_access > 10:
-                frames_iterator.close()
-                print('Stopping camera thread due to inactivity.')
+                # frames_iterator.close()
+                # print('Stopping camera thread due to inactivity.')
                 break
         Camera.thread = None
 
@@ -119,7 +119,5 @@ class Camera(object):
 
 def generate_picture(camera):
     """Video streaming generator function."""
-    while True:
-        frame = camera.get_frame()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+    frame = camera.get_frame()
+    return (b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')

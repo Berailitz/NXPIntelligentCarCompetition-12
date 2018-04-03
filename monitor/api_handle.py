@@ -22,8 +22,7 @@ def create_api():
 
 def video_feed():
     """Video streaming route. Put this in the src attribute of an img tag."""
-    return Response(generate_picture(my_camera),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate_picture(my_camera))
 
 
 class StatuspAPI(Resource):
