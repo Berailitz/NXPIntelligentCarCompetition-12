@@ -8,9 +8,6 @@
             <div id="video-card-supporting-text" class="mdl-card__supporting-text">
                 <img id="webcamera" src="/video_feed">
             </div>
-            <div class="mdl-card__actions mdl-card--border">
-                <button id="video-card-update-button" class="mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect" onclick="update_status();">刷新</button>
-            </div>
         </div>
 
         <div id="status-card" class="mdl-card mdl-shadow--2dp controller-card">
@@ -38,13 +35,11 @@
 
 {% block page_footer %}
     <script type="module">
-        import { update_status, update_picture } from "/static/js/{{ assert_url }}.js";
+        import { update_status } from "/static/js/{{ assert_url }}.js";
         window.onload = function(){
             'use strict';
-            $('#status-card-update-button')[0].addEventListener('click', function () { update_status();});
-            $('#video-card-update-button')[0].addEventListener('click', function () { update_picture();});
-            update_status();
-            update_picture();
+            document.getElementById('status-card-update-button').addEventListener('click', function () { update_status();});
+            setInterval(update_status, 100);
         };
     </script>
 {% endblock %}

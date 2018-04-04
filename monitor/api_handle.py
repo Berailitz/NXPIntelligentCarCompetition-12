@@ -3,14 +3,14 @@
 # -*- coding: UTF-8 -*-
 
 import logging
-from flask import request, Response
+from flask import request, make_response
 from flask_restful import Resource, Api, reqparse
 from .mess import fun_logger
-from .camera import generate_picture, Camera
+from .camera_handler import CameraHandler
 from .restful_helper import parse_one_arg
 
 
-my_camera = Camera()
+camera_handler = CameraHandler()
 
 
 def create_api():
@@ -20,13 +20,8 @@ def create_api():
     return api
 
 
-def video_feed():
-    """Video streaming route. Put this in the src attribute of an img tag."""
-    return Response(generate_picture(my_camera))
-
-
 class StatuspAPI(Resource):
     """handle /api/status"""
     @staticmethod
     def get():
-        return {'status': 0, 'data': {'速度': '2333m/s', '长宽比': '0.23', '是否发生事故': '否'}}
+        return {'status': 0, 'data': camera_handler.update_status()}

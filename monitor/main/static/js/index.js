@@ -12,12 +12,15 @@ function update_status() {
         console.log(rawData);
         if (rawData['status'] == 0) {
           let table_html = '';
-          Object.entries(rawData['data']).forEach(item => {
-            console.log(item);
+          Object.entries(rawData['data']['status']).forEach(item => {
             table_html +=
                 `<tr><td>${item[0]}</td><td>${item[1]}</tr>`;
           });
           $('#status-table tbody').html(table_html);
+          document.getElementById('webcamera')
+            .setAttribute(
+              'src', `${rawData['data']['picture']}`
+          );
           $('#status-table-title')[0].innerHTML = '当前状态';
           showToast('状态已更新', 800);
         } else {
@@ -26,8 +29,5 @@ function update_status() {
       })
 }
 
-function update_picture() {
-  $('#webcamera')[0].src = '/video_feed';
-}
 
-export {update_status, update_picture};
+export { update_status };
