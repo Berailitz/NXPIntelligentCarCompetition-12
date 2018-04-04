@@ -5,7 +5,7 @@
 import logging
 from flask import request, make_response
 from flask_restful import Resource, Api, reqparse
-from .mess import fun_logger
+from .mess import fun_logger, serve_opencv_image
 from .camera_handler import CameraHandler
 from .restful_helper import parse_one_arg
 
@@ -19,6 +19,8 @@ def create_api():
     api.add_resource(StatuspAPI, '/api/status')
     return api
 
+def video_feed():
+    return serve_opencv_image(camera_handler.update_image())
 
 class StatuspAPI(Resource):
     """handle /api/status"""

@@ -8,3 +8,8 @@ body
     font-family: '等线';
     justify-content: center;
 }
+
+#video-card
+{
+    width: auto;
+}

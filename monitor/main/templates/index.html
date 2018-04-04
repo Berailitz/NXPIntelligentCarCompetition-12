@@ -3,7 +3,7 @@
     <div id="main-div" class="mdl-grid">
     <div id="video-card" class="mdl-card mdl-shadow--2dp controller-card">
             <div class="mdl-card__title mdl-color--primary mdl-color-text--white">
-                <h2 id="video-table-title" class="mdl-card__title-text">视频</h2>
+                <h2 id="video-table-title" class="mdl-card__title-text">图像</h2>
             </div>
             <div id="video-card-supporting-text" class="mdl-card__supporting-text">
                 <img id="webcamera" src="/video_feed">
@@ -39,7 +39,7 @@
         window.onload = function(){
             'use strict';
             document.getElementById('status-card-update-button').addEventListener('click', function () { update_status();});
-            setInterval(update_status, 100);
+            setInterval(update_status, 300);
         };
     </script>
 {% endblock %}

@@ -4,6 +4,9 @@ import functools
 import logging
 import logging.handlers
 import socket
+import cv2
+from io import BytesIO
+from flask import send_file
 
 def check_ip(ip: str):
     try:
@@ -45,3 +48,7 @@ def set_logger(log_path):
     logging.getLogger('werkzeug').setLevel(logging.INFO)
     logging.getLogger(None).addHandler(file_handler)
     logging.info("Start ....")
+
+def serve_opencv_image(opencv_image):
+    retval, buffer = cv2.imencode('.png', opencv_image)
+    return send_file(BytesIO(buffer.tobytes()), mimetype='image/jpeg')

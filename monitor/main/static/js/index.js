@@ -19,7 +19,7 @@ function update_status() {
           $('#status-table tbody').html(table_html);
           document.getElementById('webcamera')
             .setAttribute(
-              'src', `${rawData['data']['picture']}`
+              'src', `/video_feed?` + new Date().getTime()
           );
           $('#status-table-title')[0].innerHTML = '当前状态';
           showToast('状态已更新', 800);
