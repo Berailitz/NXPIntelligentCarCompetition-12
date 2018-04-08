@@ -8,8 +8,10 @@ class CameraHandler(object):
     available."""
 
     def update_image(self):
-        img = np.random.randint(222, size=(360, 480, 3))
-        gen = np.array(img, dtype=np.uint8)
+        img_q = np.random.randint(222, size=(90, 120, 3))
+        img_h = np.concatenate((img_q,) * 4, axis=0)
+        img_f = np.concatenate((img_h,) * 4, axis=1)
+        gen = np.array(img_f, dtype=np.uint8)
         return gen
 
     def update_status(self):
