@@ -26,7 +26,7 @@ class target(object):
             #data=[self.speed[-1],self.lwrate[-1],self.maxspeed,self.xroc[-1],self.acspeed[-1]]
             diction={'picture':img, 'data': {'速度':'','长宽比':'','最大速度':'','x方向变化量':'','加速度':''}}
             #print(diction['data'])
-        
+            return diction
         else:#输出数据+图片
             self.counter=5
             if (x==0 )&(y==0):

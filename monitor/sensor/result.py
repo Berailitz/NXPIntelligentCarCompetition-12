@@ -2,6 +2,7 @@
 import cv2
 from .center import center
 from .classroom import target
+import time
 def produce():
         camera = cv2.VideoCapture(0)
         history = 20    # 训练帧数
@@ -61,6 +62,5 @@ class result(object):
         self.dict = next(self.c)
         return self.dict
     
-
 
     
