@@ -5,7 +5,7 @@ import {showToast} from '/static/js/base.js';
 function update_status() {
   let loading_notice = '更新中';
   $('#status-table-title')[0].innerHTML = loading_notice;
-  showToast(loading_notice, 1200);
+  // showToast(loading_notice, 1200);
   $.get(
       '/api/status',
       function(rawData) {
@@ -26,6 +26,7 @@ function update_status() {
         } else {
           showToast(rawData['message'], 1200);
         }
+        setTimeout(update_status, 30);
       })
 }
 
