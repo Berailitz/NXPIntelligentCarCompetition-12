@@ -26,6 +26,7 @@ function update_status() {
         } else {
           showToast(rawData['message'], 1200);
         }
+        setTimeout(update_status, 20);
       })
 }
 

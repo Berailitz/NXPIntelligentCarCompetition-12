@@ -39,7 +39,7 @@
         window.onload = function(){
             'use strict';
             document.getElementById('status-card-update-button').addEventListener('click', function () { update_status();});
-            setInterval(update_status, 300);
+            update_status();
         };
     </script>
 {% endblock %}
