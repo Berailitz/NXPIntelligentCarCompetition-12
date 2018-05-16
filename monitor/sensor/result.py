@@ -19,7 +19,10 @@ def produce():
             res, frame = camera.read()
             try:
                 retval, buffer = cv2.imencode('.jpg', frame)
-                yield {'picture': buffer, 'status': {'AA': random.randint(0, 100)}}
+                if random.randint(1, 10) > 8:
+                    yield {'picture': buffer, 'status': {'AA': random.randint(0, 100)}, 'warnning': 'WARNNING'}
+                else:
+                    yield {'picture': buffer, 'status': {'AA': random.randint(0, 100)}, 'warnning': ''}
             except:
                 print('ERROR on OPENCV')
 
