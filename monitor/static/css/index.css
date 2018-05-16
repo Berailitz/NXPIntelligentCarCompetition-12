@@ -1,6 +1,7 @@
 #status-card
 {
     width: fit-content;
+    min-width: 200px;
 }
 
 #status-table
