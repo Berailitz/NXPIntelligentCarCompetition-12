@@ -1,6 +1,7 @@
 # coding:utf8
 import random
 import cv2
+import json
 from .center import center
 from .classroom import target
 import time
@@ -15,14 +16,17 @@ def produce(video_id):
         frames = 0
         a=0
 
+        frame_index = 1
+        with open('data.json') as f_status:
+            data_dict = json.load(f_status)
         while True:
+            time.sleep(0.03)
             res, frame = camera.read()
+            frame_index += 1
             try:
                 retval, buffer = cv2.imencode('.jpg', frame)
-                if random.randint(1, 10) > 8:
-                    yield {'picture': buffer, 'status': {'AA': random.randint(0, 100)}, 'warnning': 'WARNNING'}
-                else:
-                    yield {'picture': buffer, 'status': {'AA': random.randint(0, 100)}, 'warnning': ''}
+                data_dict[str(frame_index)]['picture'] = buffer
+                yield data_dict[str(frame_index)]
             except:
                 print('ERROR on OPENCV')
 
