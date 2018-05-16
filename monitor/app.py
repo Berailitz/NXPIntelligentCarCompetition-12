@@ -4,6 +4,7 @@
 
 import base64
 import json
+import logging
 import os
 from tornado import websocket, web
 from .camera_handler import CameraHandler
@@ -26,9 +27,16 @@ class SocketHandler(websocket.WebSocketHandler):
     def on_message(self, message):
         """ Retrieve image ID from database until different from last ID,
         then retrieve image, de-serialize, encode and send to client. """
-        image_dict = self._store.update()
-        image_dict['picture'] = base64.b64encode(image_dict['picture']).decode('utf-8')
-        self.write_message(json.dumps(image_dict, ensure_ascii=False))
+        try:
+            index = int(message) + 1
+        except ValueError:
+            index = 1
+        if index % 100 == 0:
+            logging.info(f'Sending frame `{index}`.')
+        update_dict = self._store.update()
+        update_dict['picture'] = base64.b64encode(update_dict['picture']).decode('utf-8')
+        update_dict['index'] = index
+        self.write_message(json.dumps(update_dict, ensure_ascii=False))
 
 
 def create_app(log_path='log'):

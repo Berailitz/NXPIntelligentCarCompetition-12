@@ -15,7 +15,7 @@ function connect() {
     ws.onmessage = function (msg) {
       let data = JSON.parse(msg.data);
       let table_html = '';
-      ws.send(1);
+      ws.send(data['index'] + 1);
       if (data['warnning']) {
         showToast(data['warnning']);
       }
