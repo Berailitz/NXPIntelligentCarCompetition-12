@@ -1,4 +1,5 @@
 # coding:utf8
+import random
 import cv2
 from .center import center
 from .classroom import target
@@ -18,7 +19,7 @@ def produce():
             res, frame = camera.read()
             try:
                 retval, buffer = cv2.imencode('.jpg', frame)
-                yield {'picture': buffer, 'status': []}
+                yield {'picture': buffer, 'status': {'AA': random.randint(0, 100)}}
             except:
                 print('ERROR on OPENCV')
 

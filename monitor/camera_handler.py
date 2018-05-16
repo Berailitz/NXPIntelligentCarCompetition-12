@@ -8,13 +8,8 @@ class CameraHandler(object):
         self.my_result = Result()
         self.result_dict = self.my_result.detect_video()
 
-    def update_image(self):
+    def update(self):
         self.result_dict = self.my_result.detect_video()
         while not self.result_dict:
             self.result_dict = self.my_result.detect_video()
-        return self.result_dict['picture']
-
-    def update_status(self):
-        while not self.result_dict:
-            self.result_dict = self.my_result.detect_video()
-        return {'picture': '/video_feed', 'status': self.result_dict['data']}
+        return self.result_dict

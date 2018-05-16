@@ -13,7 +13,14 @@ function connect() {
       showToast("正在连接服务器");
     };
     ws.onmessage = function (msg) {
-      $("#webcamera").attr('src', 'data:image/jpg;base64,' + msg.data);
+      let data = JSON.parse(msg.data);
+      let table_html = '';
+      Object.entries(data['status']).forEach(item => {
+        table_html +=
+          `<tr><td>${item[0]}</td><td>${item[1]}</tr>`;
+      });
+      $('#status-table tbody').html(table_html);
+      $("#webcamera").attr('src', 'data:image/jpg;base64,' + data['picture']);
       ws.send(1);
     };
     ws.onerror = function (e) {
