@@ -6,8 +6,9 @@ import base64
 import json
 import logging
 import os
-from tornado import websocket, web
+from tornado import httpserver, websocket, web
 from .camera_handler import CameraHandler
+from .config import SSL_CERT_FILE, SSL_KEY_FILE, SERVER_PORT, SERVER_ADDRESS
 from .mess import set_logger
 
 
@@ -34,7 +35,8 @@ class SocketHandler(websocket.WebSocketHandler):
         if index % 100 == 0:
             logging.info(f'Sending frame `{index}`.')
         update_dict = self._store.update()
-        update_dict['picture'] = base64.b64encode(update_dict['picture']).decode('utf-8')
+        update_dict['picture'] = base64.b64encode(
+            update_dict['picture']).decode('utf-8')
         update_dict['index'] = index
         self.write_message(json.dumps(update_dict, ensure_ascii=False))
 
@@ -51,4 +53,9 @@ def create_app(log_path='log'):
         ],
         static_path=os.path.join(os.path.dirname(__file__), "static"),
         template_path=os.path.join(os.path.dirname(__file__), "templates"))
+    http_server = httpserver.HTTPServer(app, ssl_options={
+        "certfile": SSL_CERT_FILE,
+        "keyfile": SSL_KEY_FILE,
+    })
+    http_server.listen(port=SERVER_PORT, address=SERVER_ADDRESS)
     return app

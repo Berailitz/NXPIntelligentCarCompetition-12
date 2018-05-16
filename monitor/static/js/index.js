@@ -4,7 +4,7 @@ import { showToast } from '/static/js/base.js';
 
 function connect() {
   if ("WebSocket" in window) {
-    var ws_path = 'ws://' + window.location.host + window.location.pathname + 'ws/video';
+    var ws_path = 'wss://' + window.location.host + window.location.pathname + 'ws/video';
     //alert(ws_path);
     var ws = new WebSocket(ws_path);
     //alert(ws);
