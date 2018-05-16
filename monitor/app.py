@@ -2,13 +2,32 @@
 #!/usr/env/python3
 # -*- coding: UTF-8 -*-
 
-import logging
+import base64
 import os
-from flask import Flask
-from werkzeug.contrib.fixers import ProxyFix
-from .api_handle import create_api, video_feed
-from .main.views import create_main_blueprint
+from tornado import websocket, web
+from .camera_handler import CameraHandler
 from .mess import set_logger
+
+
+class IndexHandler(web.RequestHandler):
+    def get(self):
+        self.render('index.html')
+
+
+class SocketHandler(websocket.WebSocketHandler):
+    """ Handler for websocket queries. """
+
+    def __init__(self, *args, **kwargs):
+        """ Initialize the Redis store and framerate monitor. """
+        super(SocketHandler, self).__init__(*args, **kwargs)
+        self._store = CameraHandler()
+
+    def on_message(self, message):
+        """ Retrieve image ID from database until different from last ID,
+        then retrieve image, de-serialize, encode and send to client. """
+        image = self._store.update_image()
+        image = base64.b64encode(image)
+        self.write_message(image)
 
 
 def create_app(log_path='log'):
@@ -16,14 +35,11 @@ def create_app(log_path='log'):
     if not os.path.exists(log_path):
         os.mkdir(log_path)
     set_logger(f'{log_path}/log_{os.getpid()}.txt')
-    app = Flask(__name__, static_folder="main/static")
-    app.config.update(RESTFUL_JSON=dict(ensure_ascii=False))
-    api = create_api()
-    api.init_app(app)
-    main_blueprint = create_main_blueprint()
-    app.register_blueprint(main_blueprint)
-    app.wsgi_app = ProxyFix(app.wsgi_app)
-    app.add_url_rule('/video_feed', 'video_feed', video_feed)
-    logging.info('%r', app.view_functions)
-    logging.info('%r', app.url_map)
+    app = web.Application(
+        [
+            (r'/', IndexHandler),
+            (r'/ws/video', SocketHandler),
+        ],
+        static_path=os.path.join(os.path.dirname(__file__), "static"),
+        template_path=os.path.join(os.path.dirname(__file__), "templates"))
     return app

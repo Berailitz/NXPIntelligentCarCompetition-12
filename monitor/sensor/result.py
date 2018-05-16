@@ -13,6 +13,15 @@ def produce():
         targ=target(100,0,0,1)#先定义出targ
         frames = 0
         a=0
+
+        while True:
+            res, frame = camera.read()
+            try:
+                retval, buffer = cv2.imencode('.jpg', frame)
+                yield {'picture': buffer, 'status': []}
+            except:
+                print('ERROR on OPENCV')
+
         while True:
             res, frame = camera.read()
             a+=1
