@@ -20,7 +20,7 @@ def produce(video_id):
         with open('data.json') as f_status:
             data_dict = json.load(f_status)
         while True:
-            time.sleep(0.03)
+            time.sleep(0.045)
             res, frame = camera.read()
             frame_index += 1
             try:
@@ -29,6 +29,8 @@ def produce(video_id):
                 yield data_dict[str(frame_index)]
             except:
                 print('ERROR on OPENCV')
+                camera.release()
+                camera = cv2.VideoCapture('video.avi')
 
         while True:
             res, frame = camera.read()
