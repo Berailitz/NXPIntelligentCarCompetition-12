@@ -1,12 +1,14 @@
 # coding:utf8
 import random
+import logging
 import cv2
 import json
 from .center import center
 from .classroom import target
 import time
 def produce(video_id):
-        camera = cv2.VideoCapture(video_id)
+        filename = f'{video_id}.avi'
+        camera = cv2.VideoCapture(filename)
         history = 20    # 训练帧数
     
         bs = cv2.createBackgroundSubtractorKNN(detectShadows=False)  # 背景减除器，设置阴影检测
@@ -17,7 +19,7 @@ def produce(video_id):
         a=0
 
         frame_index = 1
-        with open('data.json') as f_status:
+        with open(f'{video_id}.json') as f_status:
             data_dict = json.load(f_status)
         while True:
             time.sleep(0.045)
@@ -28,10 +30,11 @@ def produce(video_id):
                 real_index = str(frame_index % (len(data_dict.keys()) - 1))
                 data_dict[real_index]['picture'] = buffer
                 yield data_dict[real_index]
-            except:
-                print('ERROR on OPENCV')
+            except Exception as e:
+                logging.exception(e)
+                print(f'ERROR on OPENCV')
                 camera.release()
-                camera = cv2.VideoCapture('video.avi')
+                camera = cv2.VideoCapture(filename)
 
         while True:
             res, frame = camera.read()
