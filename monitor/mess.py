@@ -3,27 +3,6 @@ import datetime
 import functools
 import logging
 import logging.handlers
-import socket
-import cv2
-from io import BytesIO
-from flask import send_file
-
-def check_ip(ip: str):
-    try:
-        socket.inet_pton(socket.AF_INET, ip)
-        return 0
-    except OSError:
-        try:
-            socket.inet_pton(socket.AF_INET6, ip)
-            return 1
-        except OSError:
-            return None
-
-def row2dict(row):
-    result = {}
-    for column in row.__table__.columns:
-        result[column.name] = str(getattr(row, column.name))
-    return result
 
 def fun_logger(text='Fun_logger'):
     """log function call and result with custom text head"""
@@ -45,10 +24,5 @@ def set_logger(log_path):
     file_handler = logging.handlers.TimedRotatingFileHandler(
         log_path, when='midnight', interval=1, backupCount=10, encoding='utf8', atTime=datetime.time(3, 30))
     file_handler.setFormatter(logging.Formatter('[%(levelname)s] %(asctime)s %(filename)s:%(lineno)d %(message)s'))
-    logging.getLogger('werkzeug').setLevel(logging.INFO)
     logging.getLogger(None).addHandler(file_handler)
     logging.info("Start ....")
-
-def serve_opencv_image(opencv_image):
-    retval, buffer = cv2.imencode('.png', opencv_image)
-    return send_file(BytesIO(buffer.tobytes()), mimetype='image/jpeg')

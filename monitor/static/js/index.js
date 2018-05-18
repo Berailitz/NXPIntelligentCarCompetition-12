@@ -85,7 +85,7 @@ class LiveStream {
 }
 
 function createStream(streamPath) {
-  let liveStream = new LiveStream('wss://' + window.location.host + window.location.pathname + streamPath);
+  let liveStream = new LiveStream('wss://' + window.location.host + streamPath);
   liveStream.connect();
 }
 

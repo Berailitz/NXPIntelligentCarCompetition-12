@@ -4,8 +4,8 @@ import cv2
 from .center import center
 from .classroom import target
 import time
-def produce():
-        camera = cv2.VideoCapture(0)
+def produce(video_id):
+        camera = cv2.VideoCapture(video_id)
         history = 20    # 训练帧数
     
         bs = cv2.createBackgroundSubtractorKNN(detectShadows=False)  # 背景减除器，设置阴影检测
@@ -69,8 +69,8 @@ def produce():
             yield diction
         #cv2.imshow("back", dilated)
 class result(object):
-    def __init__(self):
-       self.c = produce()
+    def __init__(self, video_id):
+       self.c = produce(video_id)
     def detect_video(self):
         self.dict = next(self.c)
         return self.dict
