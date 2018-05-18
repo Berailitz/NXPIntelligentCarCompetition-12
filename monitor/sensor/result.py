@@ -25,8 +25,9 @@ def produce(video_id):
             frame_index += 1
             try:
                 retval, buffer = cv2.imencode('.jpg', frame)
-                data_dict[str(frame_index)]['picture'] = buffer
-                yield data_dict[str(frame_index)]
+                real_index = str(frame_index % (len(data_dict.keys()) - 1))
+                data_dict[real_index]['picture'] = buffer
+                yield data_dict[real_index]
             except:
                 print('ERROR on OPENCV')
                 camera.release()
