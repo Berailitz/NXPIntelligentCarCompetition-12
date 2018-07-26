@@ -7,9 +7,10 @@ from .ocr import OCRHandle
 
 class CameraUnit(object):
     def __init__(self, video_id):
-       self.camera = cv2.VideoCapture(video_id)
-       self.ocr_handle = OCRHandle()
-       self.frame_index = 0
+        self.video_id = video_id
+        self.camera = cv2.VideoCapture(video_id)
+        self.ocr_handle = OCRHandle()
+        self.frame_index = 0
 
     def detect_video(self):
         self.frame_index += 1
@@ -24,6 +25,9 @@ class CameraUnit(object):
         return {'picture': base64.b64encode(
             buffer).decode('utf-8'), 'status': {'frame_index': self.frame_index, 'num': ocr_result}}
 
+    def __del__(self):
+        logging.warning(f"Closing camera `{self.video_id}`.")
+        self.camera.release()
 
 
 class CameraHandler(defaultdict):
