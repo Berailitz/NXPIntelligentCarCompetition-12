@@ -20,6 +20,9 @@ class SocketHandler(websocket.WebSocketHandler):
         super().__init__(application, request)
         self.camera = None
 
+    def check_origin(self, origin):
+        return True
+
     def open(self, video_id):
         logging.info(f'Open camera `{video_id}`.')
         self.camera = active_cameras[int(video_id)]
