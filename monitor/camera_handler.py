@@ -1,20 +1,27 @@
 from collections import defaultdict
 import base64
 import cv2
-from .ocr import analyse_img
+import logging
+from .ocr import OCRHandle
 
 
 class CameraUnit(object):
     def __init__(self, video_id):
        self.camera = cv2.VideoCapture(video_id)
+       self.ocr_handle = OCRHandle()
        self.frame_index = 0
 
     def detect_video(self):
         self.frame_index += 1
         res, frame = self.camera.read()
         retval, buffer = cv2.imencode('.jpg', frame)
+        try:
+            ocr_result = self.ocr_handle.analyse_img(frame)
+        except Exception as e:
+            logging.exception(e)
+            ocr_result = "-1"
         return {'picture': base64.b64encode(
-            buffer).decode('utf-8'), 'status': {'frame_index': self.frame_index, 'num': analyse_img(frame)}}
+            buffer).decode('utf-8'), 'status': {'frame_index': self.frame_index, 'num': ocr_result}}
 
 
 
