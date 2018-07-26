@@ -1,6 +1,7 @@
 from collections import defaultdict
 import base64
 import cv2
+from .ocr import analyse_img
 
 
 class CameraUnit(object):
@@ -13,7 +14,7 @@ class CameraUnit(object):
         res, frame = self.camera.read()
         retval, buffer = cv2.imencode('.jpg', frame)
         return {'picture': base64.b64encode(
-            buffer).decode('utf-8'), 'status': {'frame_index': self.frame_index}}
+            buffer).decode('utf-8'), 'status': {'frame_index': self.frame_index, 'num': analyse_img(frame)}}
 
 
 
