@@ -38,3 +38,6 @@ class SocketHandler(websocket.WebSocketHandler):
             update_dict['picture']).decode('utf-8')
         update_dict['index'] = index
         self.write_message(json.dumps(update_dict, ensure_ascii=False))
+
+    def on_close(self):
+        pass
