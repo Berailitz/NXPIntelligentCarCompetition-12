@@ -98,7 +98,7 @@ class OCRHandle(object):
                 # cv2.line draws a line in img from the point(x1,y1) to (x2,y2).
                 # (0,0,255) denotes the colour of the line to be 
                 #drawn. In this case, it is red. 
-                cv2.line(orig,(x1,y1), (x2,y2), (0,0,255),10)
+                cv2.line(orig,(x1,y1), (x2,y2), (0,0,128),10)
             return len(lines)
         else:
             return -1
