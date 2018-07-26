@@ -14,12 +14,13 @@ class CameraUnit(object):
     def detect_video(self):
         self.frame_index += 1
         res, frame = self.camera.read()
-        retval, buffer = cv2.imencode('.jpg', frame)
         try:
             ocr_result = self.ocr_handle.analyse_img(frame)
+            retval, buffer = cv2.imencode('.jpg', self.ocr_handle.orig)
         except Exception as e:
             logging.exception(e)
             ocr_result = "-1"
+            ocr_result = self.ocr_handle.analyse_img(frame)
         return {'picture': base64.b64encode(
             buffer).decode('utf-8'), 'status': {'frame_index': self.frame_index, 'num': ocr_result}}
 
