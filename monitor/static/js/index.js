@@ -85,7 +85,8 @@ class LiveStream {
 }
 
 function createStream(streamPath) {
-  let liveStream = new LiveStream('wss://' + window.location.host + streamPath);
+  let websocket_url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + streamPath;
+  let liveStream = new LiveStream(websocket_url);
   liveStream.connect();
 }
 
