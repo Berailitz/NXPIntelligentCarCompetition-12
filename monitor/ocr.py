@@ -6,7 +6,6 @@ import cv2
 import numpy as np
 import pytesseract
 
-pytesseract.pytesseract.tesseract_cmd = 'D:\\software\\Tesseract-OCR\\tesseract.exe'
 
 class OCRHandle(object):
     def __init__(self):
