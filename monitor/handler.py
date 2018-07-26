@@ -34,9 +34,6 @@ class SocketHandler(websocket.WebSocketHandler):
         if index % 100 == 0:
             logging.info(f'Sending frame `{index}`.')
         update_dict = self.camera.detect_video()
-        update_dict['picture'] = base64.b64encode(
-            update_dict['picture']).decode('utf-8')
-        update_dict['index'] = index
         self.write_message(json.dumps(update_dict, ensure_ascii=False))
 
     def on_close(self):
