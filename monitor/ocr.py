@@ -72,22 +72,35 @@ class OCRHandle(object):
     def analyse_img(self, orig):
         self.orig = orig
         self.index += 1
-        begin = datetime.datetime.now()
-        print(f"to gray: {datetime.datetime.now()}")
-        img = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
-        img = np.invert(img)
-        print(f"cut_window: {datetime.datetime.now()}")
-        img_cut = self.cut_window(img)
-        cv2.imwrite(f"img_cut_{self.index}.jpg", img_cut)
-        print(f"find_mid: {datetime.datetime.now()}")
-        mid = self.find_mid(img_cut)
-        half_imgs = [img_cut[:, :mid], img_cut[:, mid:]]
-        print(f"cut2: {datetime.datetime.now()}")
-        num_imgs = [self.cut_single_word(half_img) for half_img in half_imgs]
-        print(f"ocr: {datetime.datetime.now()}")
-        data = [self.recognize_number(num_img) for num_img in num_imgs]
-        end = datetime.datetime.now()
-        print(f"end: {datetime.datetime.now()}")
-        print(end - begin)
-        return "".join(data)
+        gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
+        threshold = 170
+        retval, gray_b = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+        edges = cv2.Canny(gray, 50, 150)
+        lines = cv2.HoughLines(edges,1,np.pi/180, 150)
+        if lines is not None:
+            for line in lines:
+                r,theta = line[0]
+                # Stores the value of cos(theta) in a
+                a = np.cos(theta)
+                # Stores the value of sin(theta) in b
+                b = np.sin(theta)
+                # x0 stores the value rcos(theta)
+                x0 = a*r
+                # y0 stores the value rsin(theta)
+                y0 = b*r
+                # x1 stores the rounded off value of (rcos(theta)-1000sin(theta))
+                x1 = int(x0 + 1000*(-b))
+                # y1 stores the rounded off value of (rsin(theta)+1000cos(theta))
+                y1 = int(y0 + 1000*(a))
+                # x2 stores the rounded off value of (rcos(theta)+1000sin(theta))
+                x2 = int(x0 - 1000*(-b))
+                # y2 stores the rounded off value of (rsin(theta)-1000cos(theta))
+                y2 = int(y0 - 1000*(a))
+                # cv2.line draws a line in img from the point(x1,y1) to (x2,y2).
+                # (0,0,255) denotes the colour of the line to be 
+                #drawn. In this case, it is red. 
+                cv2.line(orig,(x1,y1), (x2,y2), (0,0,255),10)
+            return len(lines)
+        else:
+            return -1
 
