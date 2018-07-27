@@ -1,7 +1,7 @@
 from collections import defaultdict
 import base64
-import cv2
 import logging
+import cv2
 from .ocr import OCRHandle
 
 
@@ -14,15 +14,17 @@ class CameraUnit(object):
 
     def detect_video(self):
         self.frame_index += 1
-        res, frame = self.camera.read()
+        result = {'picture': '', 'status': {
+            'frame_index': self.frame_index, 'num': -1}}
         try:
+            res, frame = self.camera.read()
             ocr_result = self.ocr_handle.analyse_img(frame)
             retval, buffer = cv2.imencode('.jpg', self.ocr_handle.orig)
+            result['picture'] = base64.b64encode(buffer).decode('utf-8')
+            result['status']['line_counter'] = ocr_result
         except Exception as e:
             logging.exception(e)
-            ocr_result = "-1"
-        return {'picture': base64.b64encode(
-            buffer).decode('utf-8'), 'status': {'frame_index': self.frame_index, 'num': ocr_result}}
+        return result
 
     def __del__(self):
         logging.warning(f"Closing camera `{self.video_id}`.")
@@ -30,7 +32,6 @@ class CameraUnit(object):
 
 
 class CameraHandler(defaultdict):
-
     def __init__(self):
         super().__init__()
 

@@ -176,12 +176,13 @@ class OCRHandle(object):
         gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 50, 150)
         lines = cv2.HoughLines(edges, 1, np.pi/180, 150)
-        hori_lines, vert_lines = self.filter_lines(lines)
-        # logging.info(f"hori_lines: {hori_lines}")
-        # logging.info(f"vert_lines: {vert_lines}")
-        if hori_lines and vert_lines and len(hori_lines) >= 2 and len(vert_lines) >= 2:
-            max_square = self.get_max_square(hori_lines, vert_lines)
-            cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
-            return len(hori_lines) + len(vert_lines)
+        if lines is not None:
+            hori_lines, vert_lines = self.filter_lines(lines)
+            # logging.info(f"hori_lines: {hori_lines}")
+            # logging.info(f"vert_lines: {vert_lines}")
+            if hori_lines and vert_lines and len(hori_lines) >= 2 and len(vert_lines) >= 2:
+                max_square = self.get_max_square(hori_lines, vert_lines)
+                cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
+                return len(hori_lines) + len(vert_lines)
         else:
             return -1
