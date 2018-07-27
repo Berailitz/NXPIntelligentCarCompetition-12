@@ -122,7 +122,7 @@ class OCRHandle(object):
                     a, b = self.get_line_in_ab(r, theta)
                     cv2.line(self.orig, *self.get_line_tuple(r, theta), (200, 0, 0), 2)
                     # print(f"Hori: {(r,theta)}, y = {a} * x + {b}")
-        return (sorted(hori_lines, key=lambda line: line[0] / math.cos(line[1])), sorted(vert_lines, key=lambda line: line[0] / math.sin(line[1])))
+        return (sorted(hori_lines, key=lambda line: line[0] / math.cos(line[1])), sorted(vert_lines, key=lambda line: line[0] / math.cos(line[1])))
 
     @staticmethod
     def iterate_near(iterable) -> tuple:
