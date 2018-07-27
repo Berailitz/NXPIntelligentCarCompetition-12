@@ -80,7 +80,9 @@ class LiveStream {
         `<tr><td>${item[0]}</td><td>${item[1]}</tr>`;
     });
     $('#status-table tbody').html(table_html);
-    $("#webcamera").attr('src', 'data:image/jpg;base64,' + data['picture']);
+    Object.entries(data['video']).forEach(item => {
+      $(`#${item[0]}`).attr('src', `data:image/jpg;base64,${item[1]}`);
+    });
   }
 }
 
