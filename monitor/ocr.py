@@ -139,7 +139,12 @@ class OCRHandle(object):
 
     @staticmethod
     def get_line_in_ab(r, theta) -> tuple():
-        return (- 1.0 / math.tan(theta), r / math.sin(theta))
+        result = None
+        if theta == 0:
+            result = (0, 0)
+        else:
+            result = (- 1.0 / math.tan(theta), r / math.sin(theta))
+        return result
 
     def get_line_crossing(self, line_1: tuple, line_2: tuple) -> tuple():
         a_1, b_1 = self.get_line_in_ab(*line_1)
