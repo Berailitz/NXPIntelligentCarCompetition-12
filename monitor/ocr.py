@@ -81,6 +81,14 @@ class OCRHandle(object):
         #drawn. In this case, it is red.
         return ((x1, y1), (x2, y2))
 
+    @staticmethod
+    def get_line_angle(line: tuple) -> float:
+        r, theta = line
+        if theta < np.pi * 0.5:
+            return theta + np.pi * 0.5
+        else:
+            return theta - np.pi * 0.5
+
     def filter_lines(self, lines: list) -> tuple:
         vert_lines = []
         hori_lines = []
@@ -91,7 +99,7 @@ class OCRHandle(object):
                 is_duplicate = self.check_line_duplication(vert_lines, r, theta)
                 if not is_duplicate:
                     vert_lines.append(line[0])
-                    a, b = self.get_line_in_ab(r, theta)
+                    a, b = self.get_line_in_ab(line[0])
                     cv2.line(self.orig, *self.get_line_tuple(r, theta), (200, 0, 0), 2)
                     # print(f"Vert: {(r,theta)}, y = {a} * x + {b}")
             else:
@@ -99,10 +107,10 @@ class OCRHandle(object):
                 is_duplicate = self.check_line_duplication(hori_lines, r, theta)
                 if not is_duplicate:
                     hori_lines.append(line[0])
-                    a, b = self.get_line_in_ab(r, theta)
+                    a, b = self.get_line_in_ab(line[0])
                     cv2.line(self.orig, *self.get_line_tuple(r, theta), (200, 0, 0), 2)
                     # print(f"Hori: {(r,theta)}, y = {a} * x + {b}")
-        return (sorted(hori_lines, key=lambda line: line[0] / math.cos(line[1])), sorted(vert_lines, key=lambda line: line[0] / math.cos(line[1])))
+        return (sorted(hori_lines, key=self.get_line_angle), sorted(vert_lines, key=self.get_line_angle))
 
     @staticmethod
     def iterate_near(iterable) -> tuple:
@@ -118,7 +126,8 @@ class OCRHandle(object):
                 break
 
     @staticmethod
-    def get_line_in_ab(r, theta) -> tuple():
+    def get_line_in_ab(line: tuple) -> tuple():
+        r, theta = line
         result = None
         if theta == 0:
             result = (0, 0)
@@ -127,8 +136,8 @@ class OCRHandle(object):
         return result
 
     def get_line_crossing(self, line_1: tuple, line_2: tuple) -> tuple():
-        a_1, b_1 = self.get_line_in_ab(*line_1)
-        a_2, b_2 = self.get_line_in_ab(*line_2)
+        a_1, b_1 = self.get_line_in_ab(line_1)
+        a_2, b_2 = self.get_line_in_ab(line_2)
         return (round((b_2 - b_1) / (a_1 - a_2)), round((a_1 * b_2 - a_2 * b_1) / (a_1 - a_2)))
 
     def is_in_image(self, image, x, y) -> bool:
@@ -155,6 +164,7 @@ class OCRHandle(object):
         return max(1.0 * self.status['height'] / self.status['width'], 1.0 * self.status['width'] / self.status['height'])
 
     def get_max_square(self, hori_lines: list, vert_lines: list) -> tuple:
+        MAX_RATIO = 1.4
         max_square_size = 0
         max_square = None
         for hori_line_pair, vert_line_pair in itertools.product(self.iterate_near(hori_lines), self.iterate_near(vert_lines)):
@@ -166,11 +176,12 @@ class OCRHandle(object):
                     line_crossings.append((x, y))
             if len(line_crossings) == 4:
                 ratio = self.get_rec_ratio(line_crossings)
-                if ratio < 1.5:
+                if ratio < MAX_RATIO:
                     new_size = cv2.contourArea(np.intp(line_crossings))
                     self.status['ratio'] = round(ratio, 3)
                     # print(f"new size: {new_size}")
                     if new_size > max_square_size:
+                        max_square_size = new_size
                         max_square = line_crossings.copy()
                         # cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
         if max_square is not None:
@@ -187,7 +198,7 @@ class OCRHandle(object):
         CUT_BOARDER_HORI = 100
         width = orig.shape[1]
         height = orig.shape[0]
-        canvas = np.float32([[0, height], [width, height], [width, 0], [0, 0]])
+        canvas = np.float32([[width, height], [0, height], [0, 0], [width, 0]])
         gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 50, 150)
         lines = cv2.HoughLines(edges, 1, np.pi/180, 150)
