@@ -21,7 +21,6 @@ class CameraUnit(object):
         except Exception as e:
             logging.exception(e)
             ocr_result = "-1"
-            ocr_result = self.ocr_handle.analyse_img(frame)
         return {'picture': base64.b64encode(
             buffer).decode('utf-8'), 'status': {'frame_index': self.frame_index, 'num': ocr_result}}
 
