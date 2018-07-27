@@ -189,6 +189,6 @@ class OCRHandle(object):
             if hori_lines and vert_lines and len(hori_lines) >= 2 and len(vert_lines) >= 2:
                 max_square = self.get_max_square(hori_lines, vert_lines)
                 if max_square:
-                    cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
+                    cv2.drawContours(orig, np.intp([max_square]), -1, (0, 250, 0), 3)
                     return len(hori_lines) + len(vert_lines)
         return -1
