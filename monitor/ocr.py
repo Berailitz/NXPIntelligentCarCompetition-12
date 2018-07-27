@@ -23,14 +23,14 @@ class OCRHandle(object):
     def find_mid(self, img):
         width = img.shape[1]
         height = img.shape[0]
-        noise_threshold = 20
+        NOISE_THRESHOLD = 10
         mid = round(0.5 * width)
         for x in self.possible_mids(width):
             noise = 0
             for y in range(round(height * 0.25), round(height * 0.75)):
                 if img[y, x] == 0:
                     noise += 1
-            if noise >= noise_threshold:
+            if noise <= NOISE_THRESHOLD:
                 mid = x
                 break
         return mid
@@ -178,10 +178,13 @@ class OCRHandle(object):
         return max_square
 
     def analyse_img(self, orig):
+        self.status = {}
         self.orig = orig
         self.cut = None
         self.index += 1
         THRESHHOLD_CUT = 150
+        CUT_BOARDER_VERT = 100
+        CUT_BOARDER_HORI = 100
         width = orig.shape[1]
         height = orig.shape[0]
         canvas = np.float32([[0, height], [width, height], [width, 0], [0, 0]])
@@ -197,8 +200,15 @@ class OCRHandle(object):
                 if max_square:
                     cv2.drawContours(orig, np.intp([max_square]), -1, (0, 250, 0), 3)
                     M = cv2.getPerspectiveTransform(np.float32([max_square]), canvas)
-                    self.cut = cv2.warpPerspective(gray, M, (0, 0))
+                    self.cut = np.invert(cv2.warpPerspective(gray, M, (0, 0)))
+                    self.cut = self.cut[CUT_BOARDER_VERT:-CUT_BOARDER_VERT, CUT_BOARDER_HORI:-CUT_BOARDER_HORI]
                     retval, self.cut = cv2.threshold(self.cut, THRESHHOLD_CUT, 255, cv2.THRESH_BINARY)
                     self.status['line_counter'] = len(hori_lines) + len(vert_lines)
+                    self.status['mid'] = self.find_mid(self.cut)
+                    cv2.line(self.cut, (self.status['mid'], 0), (self.status['mid'], width), 100, 2)
+                    half_imgs = [self.cut[:, :self.status['mid']], self.cut[:, self.status['mid']:]]
+                    num_imgs = [self.cut_single_word(half_img) for half_img in half_imgs]
+                    data = [self.recognize_number(num_img) for num_img in half_imgs]
+                    self.status['text'] = "".join(data)
                     return
         self.status['line_counter'] = -1
