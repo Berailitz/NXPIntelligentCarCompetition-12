@@ -163,6 +163,30 @@ class OCRHandle(object):
         self.status['width'] = max_x - min_x
         return max(1.0 * self.status['height'] / self.status['width'], 1.0 * self.status['width'] / self.status['height'])
 
+    @staticmethod
+    def order_points(rect_points):
+        rect_points = np.array(rect_points, dtype=np.float16)
+        # initialzie a list of coordinates that will be ordered
+        # such that the first entry in the list is the top-left,
+        # the second entry is the top-right, the third is the
+        # bottom-right, and the fourth is the bottom-left
+        rect = [0] * 4
+
+        # the top-left point will have the smallest sum, whereas
+        # the bottom-right point will have the largest sum
+        s = rect_points.sum(axis = 1)
+        rect[0] = rect_points[np.argmin(s)]
+        rect[2] = rect_points[np.argmax(s)]
+
+        # now, compute the difference between the points, the
+        # top-right point will have the smallest difference,
+        # whereas the bottom-left will have the largest difference
+        diff = np.diff(rect_points, axis = 1)
+        rect[1] = rect_points[np.argmin(diff)]
+        rect[3] = rect_points[np.argmax(diff)]
+        return rect
+
+
     def get_max_square(self, hori_lines: list, vert_lines: list) -> tuple:
         MAX_RATIO = 1.4
         max_square_size = 0
@@ -185,7 +209,7 @@ class OCRHandle(object):
                         max_square = line_crossings.copy()
                         # cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
         if max_square is not None:
-            max_square[2], max_square[3] = max_square[3], max_square[2]
+            max_square = self.order_points(max_square)
         return max_square
 
     def analyse_img(self, orig):
@@ -198,7 +222,7 @@ class OCRHandle(object):
         CUT_BOARDER_HORI = 100
         width = orig.shape[1]
         height = orig.shape[0]
-        canvas = np.float32([[width, height], [0, height], [0, 0], [width, 0]])
+        canvas = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
         gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 50, 150)
         lines = cv2.HoughLines(edges, 1, np.pi/180, 150)
