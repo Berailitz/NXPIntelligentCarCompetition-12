@@ -20,10 +20,14 @@ class CameraUnit(object):
             res, frame = self.camera.read()
             if frame is not None:
                 ocr_result = self.ocr_handle.analyse_img(frame)
-                retval, buffer = cv2.imencode('.jpg', self.ocr_handle.orig)
                 result['video'] = {}
-                result['video']['video_raw'] = base64.b64encode(buffer).decode('utf-8')
-                result['video']['video_cut'] = base64.b64encode(buffer).decode('utf-8')
+                retval, buffer_orig = cv2.imencode('.jpg', self.ocr_handle.orig)
+                result['video']['video_raw'] = base64.b64encode(buffer_orig).decode('utf-8')
+                if self.ocr_handle.cut is not None:
+                    retval, buffer_cut = cv2.imencode('.jpg', self.ocr_handle.cut)
+                    result['video']['video_cut'] = base64.b64encode(buffer_cut).decode('utf-8')
+                else:
+                    result['video']['video_cut'] = ''
                 result['status']['line_counter'] = ocr_result
         except Exception as e:
             logging.exception(e)

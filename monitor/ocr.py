@@ -9,6 +9,7 @@ import pytesseract
 class OCRHandle(object):
     def __init__(self):
         self.orig = None
+        self.cut = None
         self.index = 0
 
     def cut_window(self, img):
@@ -178,7 +179,11 @@ class OCRHandle(object):
 
     def analyse_img(self, orig):
         self.orig = orig
+        self.cut = None
         self.index += 1
+        width = orig.shape[1]
+        height = orig.shape[0]
+        canvas = np.float32([[0, height], [width, height], [width, 0], [0, 0]])
         gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, 50, 150)
         lines = cv2.HoughLines(edges, 1, np.pi/180, 150)
@@ -190,5 +195,7 @@ class OCRHandle(object):
                 max_square = self.get_max_square(hori_lines, vert_lines)
                 if max_square:
                     cv2.drawContours(orig, np.intp([max_square]), -1, (0, 250, 0), 3)
+                    M = cv2.getPerspectiveTransform(np.float32([max_square]), canvas)
+                    self.cut = cv2.warpPerspective(gray, M, (0, 0))
                     return len(hori_lines) + len(vert_lines)
         return -1
