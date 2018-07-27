@@ -11,28 +11,7 @@ class OCRHandle(object):
         self.orig = None
         self.cut = None
         self.index = 0
-
-    def cut_window(self, img):
-        threshold1 = 0
-        threshold2 = 60
-        height = round(img.shape[0])
-        width = round(img.shape[1])
-        _, thresh = cv2.threshold(
-            img, threshold1, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        im2, contours, hierarchy = cv2.findContours(
-            thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
-        contours = sorted(
-            contours, key=cv2.contourArea, reverse=True)
-        rect = cv2.minAreaRect(contours[0])
-        box = cv2.boxPoints(rect)
-        cv2.drawContours(self.orig, [np.intp(box)], 0, (0, 0, 255), 10)
-        box_f = np.float32(box)
-        canvas = np.float32([[width, height], [0, height], [0, 0], [width, 0]])
-        M = cv2.getPerspectiveTransform(box_f, canvas)
-        result = cv2.warpPerspective(img, M, (0, 0))
-        retval, result_b = cv2.threshold(
-            result, threshold2, 255, cv2.THRESH_BINARY)
-        return result_b
+        self.status = {}
 
     def possible_mids(self, width):
         mids_left = (x for x in range(round(width * 0.5), 0, -1))
@@ -157,22 +136,43 @@ class OCRHandle(object):
         height = image.shape[0]
         return x > 0 and x < width and y > 0 and y < height
 
+    def get_rec_ratio(self, dot_list: list) -> float:
+        min_x = 10000
+        max_x = 0
+        min_y = 10000
+        max_y = 0
+        for (x, y) in dot_list:
+            if x > max_x:
+                max_x = x
+            if x < min_x:
+                min_x = x
+            if y > max_y:
+                max_y = y
+            if y < min_y:
+                min_y = y
+        self.status['height'] = max_y - min_y
+        self.status['width'] = max_x - min_x
+        return max(1.0 * self.status['height'] / self.status['width'], 1.0 * self.status['width'] / self.status['height'])
+
     def get_max_square(self, hori_lines: list, vert_lines: list) -> tuple:
         max_square_size = 0
         max_square = None
         for hori_line_pair, vert_line_pair in itertools.product(self.iterate_near(hori_lines), self.iterate_near(vert_lines)):
             # print(f"line_pairs: {hori_line_pair}, {vert_line_pair}")
-            line_crossings = []
+            line_crossings = [] # [(x, y), ..]
             for hori_line, vert_line in itertools.product(iter(hori_line_pair), iter(vert_line_pair)):
                 x, y = self.get_line_crossing(hori_line, vert_line)
                 if self.is_in_image(self.orig, x, y):
                     line_crossings.append((x, y))
             if len(line_crossings) == 4:
-                new_size = cv2.contourArea(np.intp(line_crossings))
-                # print(f"new size: {new_size}")
-                if new_size > max_square_size:
-                    max_square = line_crossings.copy()
-                    # cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
+                ratio = self.get_rec_ratio(line_crossings)
+                if ratio < 1.5:
+                    new_size = cv2.contourArea(np.intp(line_crossings))
+                    self.status['ratio'] = round(ratio, 3)
+                    # print(f"new size: {new_size}")
+                    if new_size > max_square_size:
+                        max_square = line_crossings.copy()
+                        # cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
         if max_square is not None:
             max_square[2], max_square[3] = max_square[3], max_square[2]
         return max_square
@@ -181,6 +181,7 @@ class OCRHandle(object):
         self.orig = orig
         self.cut = None
         self.index += 1
+        THRESHHOLD_CUT = 150
         width = orig.shape[1]
         height = orig.shape[0]
         canvas = np.float32([[0, height], [width, height], [width, 0], [0, 0]])
@@ -197,5 +198,7 @@ class OCRHandle(object):
                     cv2.drawContours(orig, np.intp([max_square]), -1, (0, 250, 0), 3)
                     M = cv2.getPerspectiveTransform(np.float32([max_square]), canvas)
                     self.cut = cv2.warpPerspective(gray, M, (0, 0))
-                    return len(hori_lines) + len(vert_lines)
-        return -1
+                    retval, self.cut = cv2.threshold(self.cut, THRESHHOLD_CUT, 255, cv2.THRESH_BINARY)
+                    self.status['line_counter'] = len(hori_lines) + len(vert_lines)
+                    return
+        self.status['line_counter'] = -1
