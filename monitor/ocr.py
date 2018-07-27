@@ -112,7 +112,7 @@ class OCRHandle(object):
                 if not is_duplicate:
                     vert_lines.append(line[0])
                     a, b = self.get_line_in_ab(r, theta)
-                    # cv2.line(orig,*get_line_tuple(r, theta), (0,0,255),10)
+                    cv2.line(self.orig, *self.get_line_tuple(r, theta), (200, 0, 0), 2)
                     # print(f"Vert: {(r,theta)}, y = {a} * x + {b}")
             else:
                 # 横线
@@ -120,7 +120,7 @@ class OCRHandle(object):
                 if not is_duplicate:
                     hori_lines.append(line[0])
                     a, b = self.get_line_in_ab(r, theta)
-                    # cv2.line(orig,*get_line_tuple(r, theta), (0,255,0),10)
+                    cv2.line(self.orig, *self.get_line_tuple(r, theta), (200, 0, 0), 2)
                     # print(f"Hori: {(r,theta)}, y = {a} * x + {b}")
         return (sorted(hori_lines, key=lambda line: line[0] / math.cos(line[1])), sorted(vert_lines, key=lambda line: line[0] / math.cos(line[1])))
 
