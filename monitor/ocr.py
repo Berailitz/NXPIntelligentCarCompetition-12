@@ -172,7 +172,8 @@ class OCRHandle(object):
                 if new_size > max_square_size:
                     max_square = line_crossings.copy()
                     # cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
-        max_square[2], max_square[3] = max_square[3], max_square[2]
+        if max_square is not None:
+            max_square[2], max_square[3] = max_square[3], max_square[2]
         return max_square
 
     def analyse_img(self, orig):
