@@ -4,6 +4,7 @@ import math
 import cv2
 import numpy as np
 import pytesseract
+from .mess import get_current_time
 
 
 class OCRHandle(object):
@@ -149,12 +150,24 @@ class OCRHandle(object):
         height = image.shape[0]
         return x > 0 and x < width and y > 0 and y < height
 
-    def get_rec_ratio(self, dot_list: list) -> float:
+    def is_rect_valid(self, dot_list: list) -> bool:
         """ dot_list: sorted [(x, y)]
         """
-        self.status['width'] = dot_list[1][0] - dot_list[0][0]
-        self.status['height'] = dot_list[3][1] - dot_list[0][1]
-        return max(1.0 * self.status['height'] / self.status['width'], 1.0 * self.status['width'] / self.status['height'])
+        RATIO_THRESHHOLD = 1.4
+        SHORTEST_BOARDER = 200
+        result = True
+        x_list = [dot[0] for dot in dot_list]
+        y_list = [dot[1] for dot in dot_list]
+        width = max(x_list) - min(x_list)
+        height = max(y_list) - min(y_list)
+        long_border = max(width, height)
+        short_border = min(width, height)
+        self.status['width'] = width
+        self.status['height'] = height
+        self.status['ratio'] = round(1.0 * long_border / short_border, 3)
+        if self.status['ratio'] > RATIO_THRESHHOLD or short_border < SHORTEST_BOARDER:
+            result = False
+        return result
 
     @staticmethod
     def order_points(rect_points: list) -> None:
@@ -189,10 +202,8 @@ class OCRHandle(object):
                     line_crossings.append((x, y))
             if len(line_crossings) == 4:
                 self.order_points(line_crossings)
-                ratio = self.get_rec_ratio(line_crossings)
-                if ratio < MAX_RATIO:
+                if self.is_rect_valid(line_crossings):
                     new_size = cv2.contourArea(np.intp(line_crossings))
-                    self.status['ratio'] = round(ratio, 3)
                     # print(f"new size: {new_size}")
                     if new_size > max_square_size:
                         max_square_size = new_size
@@ -200,12 +211,37 @@ class OCRHandle(object):
                         # cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
         return max_square
 
+    # Calculates rotation matrix to euler angles
+    # The result is the same as MATLAB except the order
+    # of the euler angles ( x and z are swapped ).
+    # The industry standard is Z-Y-X because that
+    # corresponds to yaw, pitch and roll. See
+    # [picture](https://blog.csdn.net/u012525096/article/details/78890463)
+    @staticmethod
+    def rotationMatrixToEulerAngles(R):
+        sy = math.sqrt(R[0, 0] * R[0, 0] + R[1, 0] * R[1, 0])
+        singular = sy < 1e-6
+        if not singular:
+            x = math.atan2(R[2, 1], R[2, 2])
+            y = math.atan2(-R[2, 0], sy)
+            z = math.atan2(R[1, 0], R[0, 0])
+        else:
+            x = math.atan2(-R[1, 2], R[1, 1])
+            y = math.atan2(-R[2, 0], sy)
+            z = 0
+        return np.array([x, y, z])
+
+    def get_camera_angle(self, transformation_matrix) -> None:
+        camera_matrix = [[333.23782666589585, 0.0, 326.7098847510598], [
+            0.0, 327.9782773488513, 226.56937724451208], [0.0, 0.0, 1.0]]
+        pass
+
     def analyse_img(self, orig):
         self.status = {}
         self.orig = orig
         self.cut = None
         self.index += 1
-        THRESHHOLD_CUT = 80
+        THRESHHOLD_CUT = 40
         CUT_BOARDER_VERT = 100
         CUT_BOARDER_HORI = 100
         width = orig.shape[1]
@@ -215,6 +251,7 @@ class OCRHandle(object):
         edges = cv2.Canny(gray, 50, 150)
         lines = cv2.HoughLines(edges, 1, np.pi/180, 150)
         if lines is not None:
+            self.status['raw_line_counter'] = len(lines)
             hori_lines, vert_lines = self.filter_lines(lines)
             # logging.info(f"hori_lines: {hori_lines}")
             # logging.info(f"vert_lines: {vert_lines}")
@@ -225,6 +262,7 @@ class OCRHandle(object):
                         [max_square]), -1, (0, 250, 0), 3)
                     M = cv2.getPerspectiveTransform(
                         np.float32([max_square]), canvas)
+                    self.get_camera_angle(M)
                     self.cut = np.invert(cv2.warpPerspective(gray, M, (0, 0)))
                     self.cut = self.cut[CUT_BOARDER_VERT:-
                                         CUT_BOARDER_VERT, CUT_BOARDER_HORI:-CUT_BOARDER_HORI]
@@ -243,5 +281,6 @@ class OCRHandle(object):
                             for num_img in half_imgs]
                     self.status['text'] = "".join(data)
                     logging.info(f"Result: {self.status}")
+                    # cv2.imwrite(f"D:\\kites\\Documents\\code\\project\\transportation\\ui\\web\\git\\img_data\\num\\{get_current_time()}_{self.index}_{self.status['text']}.jpg", self.cut)
                     return
         self.status['line_counter'] = -1

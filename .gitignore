@@ -3,6 +3,7 @@ img_data/
 credentials.py
 .vscode/
 .jupyterrc.py
+camera_calibration/capture.jpg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
