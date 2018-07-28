@@ -96,19 +96,23 @@ class OCRHandle(object):
             r, theta = line[0]
             if theta < np.pi * 0.25 or theta > np.pi * 0.75:
                 # 竖线
-                is_duplicate = self.check_line_duplication(vert_lines, r, theta)
+                is_duplicate = self.check_line_duplication(
+                    vert_lines, r, theta)
                 if not is_duplicate:
                     vert_lines.append(line[0])
                     a, b = self.get_line_in_ab(line[0])
-                    cv2.line(self.orig, *self.get_line_tuple(r, theta), (200, 0, 0), 2)
+                    cv2.line(self.orig, *self.get_line_tuple(r,
+                                                             theta), (200, 0, 0), 2)
                     # print(f"Vert: {(r,theta)}, y = {a} * x + {b}")
             else:
                 # 横线
-                is_duplicate = self.check_line_duplication(hori_lines, r, theta)
+                is_duplicate = self.check_line_duplication(
+                    hori_lines, r, theta)
                 if not is_duplicate:
                     hori_lines.append(line[0])
                     a, b = self.get_line_in_ab(line[0])
-                    cv2.line(self.orig, *self.get_line_tuple(r, theta), (200, 0, 0), 2)
+                    cv2.line(self.orig, *self.get_line_tuple(r,
+                                                             theta), (200, 0, 0), 2)
                     # print(f"Hori: {(r,theta)}, y = {a} * x + {b}")
         return (sorted(hori_lines, key=self.get_line_angle), sorted(vert_lines, key=self.get_line_angle))
 
@@ -146,46 +150,31 @@ class OCRHandle(object):
         return x > 0 and x < width and y > 0 and y < height
 
     def get_rec_ratio(self, dot_list: list) -> float:
-        min_x = 10000
-        max_x = 0
-        min_y = 10000
-        max_y = 0
-        for (x, y) in dot_list:
-            if x > max_x:
-                max_x = x
-            if x < min_x:
-                min_x = x
-            if y > max_y:
-                max_y = y
-            if y < min_y:
-                min_y = y
-        self.status['height'] = max_y - min_y
-        self.status['width'] = max_x - min_x
+        """ dot_list: sorted [(x, y)]
+        """
+        self.status['width'] = dot_list[1][0] - dot_list[0][0]
+        self.status['height'] = dot_list[3][1] - dot_list[0][1]
         return max(1.0 * self.status['height'] / self.status['width'], 1.0 * self.status['width'] / self.status['height'])
 
     @staticmethod
-    def order_points(rect_points):
-        rect_points = np.array(rect_points, dtype=np.float16)
-        # initialzie a list of coordinates that will be ordered
-        # such that the first entry in the list is the top-left,
-        # the second entry is the top-right, the third is the
-        # bottom-right, and the fourth is the bottom-left
-        rect = [0] * 4
+    def order_points(rect_points: list) -> None:
+        rect_points_np = np.array(rect_points, dtype=np.int)
 
         # the top-left point will have the smallest sum, whereas
         # the bottom-right point will have the largest sum
-        s = rect_points.sum(axis = 1)
-        rect[0] = rect_points[np.argmin(s)]
-        rect[2] = rect_points[np.argmax(s)]
+        s = rect_points_np.sum(axis=1)
+        rect_points[0] = rect_points_np[np.argmin(s)] # top-left
+        rect_points[2] = rect_points_np[np.argmax(s)] # bottom-right
 
         # now, compute the difference between the points, the
         # top-right point will have the smallest difference,
         # whereas the bottom-left will have the largest difference
-        diff = np.diff(rect_points, axis = 1)
-        rect[1] = rect_points[np.argmin(diff)]
-        rect[3] = rect_points[np.argmax(diff)]
-        return rect
+        diff = np.diff(rect_points_np, axis=1)
+        rect_points[1] = rect_points_np[np.argmin(diff)] # top-right
+        rect_points[3] = rect_points_np[np.argmax(diff)] # bottom-left
 
+        for i, dot in enumerate(rect_points):
+            rect_points[i] = tuple(dot.tolist())
 
     def get_max_square(self, hori_lines: list, vert_lines: list) -> tuple:
         MAX_RATIO = 1.4
@@ -193,12 +182,13 @@ class OCRHandle(object):
         max_square = None
         for hori_line_pair, vert_line_pair in itertools.product(self.iterate_near(hori_lines), self.iterate_near(vert_lines)):
             # print(f"line_pairs: {hori_line_pair}, {vert_line_pair}")
-            line_crossings = [] # [(x, y), ..]
+            line_crossings = []  # [(x, y), ..]
             for hori_line, vert_line in itertools.product(iter(hori_line_pair), iter(vert_line_pair)):
                 x, y = self.get_line_crossing(hori_line, vert_line)
                 if self.is_in_image(self.orig, x, y):
                     line_crossings.append((x, y))
             if len(line_crossings) == 4:
+                self.order_points(line_crossings)
                 ratio = self.get_rec_ratio(line_crossings)
                 if ratio < MAX_RATIO:
                     new_size = cv2.contourArea(np.intp(line_crossings))
@@ -208,8 +198,6 @@ class OCRHandle(object):
                         max_square_size = new_size
                         max_square = line_crossings.copy()
                         # cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
-        if max_square is not None:
-            max_square = self.order_points(max_square)
         return max_square
 
     def analyse_img(self, orig):
@@ -217,7 +205,7 @@ class OCRHandle(object):
         self.orig = orig
         self.cut = None
         self.index += 1
-        THRESHHOLD_CUT = 150
+        THRESHHOLD_CUT = 80
         CUT_BOARDER_VERT = 100
         CUT_BOARDER_HORI = 100
         width = orig.shape[1]
@@ -233,17 +221,27 @@ class OCRHandle(object):
             if hori_lines and vert_lines and len(hori_lines) >= 2 and len(vert_lines) >= 2:
                 max_square = self.get_max_square(hori_lines, vert_lines)
                 if max_square:
-                    cv2.drawContours(orig, np.intp([max_square]), -1, (0, 250, 0), 3)
-                    M = cv2.getPerspectiveTransform(np.float32([max_square]), canvas)
+                    cv2.drawContours(orig, np.intp(
+                        [max_square]), -1, (0, 250, 0), 3)
+                    M = cv2.getPerspectiveTransform(
+                        np.float32([max_square]), canvas)
                     self.cut = np.invert(cv2.warpPerspective(gray, M, (0, 0)))
-                    self.cut = self.cut[CUT_BOARDER_VERT:-CUT_BOARDER_VERT, CUT_BOARDER_HORI:-CUT_BOARDER_HORI]
-                    retval, self.cut = cv2.threshold(self.cut, THRESHHOLD_CUT, 255, cv2.THRESH_BINARY)
-                    self.status['line_counter'] = len(hori_lines) + len(vert_lines)
+                    self.cut = self.cut[CUT_BOARDER_VERT:-
+                                        CUT_BOARDER_VERT, CUT_BOARDER_HORI:-CUT_BOARDER_HORI]
+                    retval, self.cut = cv2.threshold(
+                        self.cut, THRESHHOLD_CUT, 255, cv2.THRESH_BINARY)
+                    self.status['line_counter'] = len(
+                        hori_lines) + len(vert_lines)
                     self.status['mid'] = self.find_mid(self.cut)
-                    cv2.line(self.cut, (self.status['mid'], 0), (self.status['mid'], width), 100, 2)
-                    half_imgs = [self.cut[:, :self.status['mid']], self.cut[:, self.status['mid']:]]
-                    num_imgs = [self.cut_single_word(half_img) for half_img in half_imgs]
-                    data = [self.recognize_number(num_img) for num_img in half_imgs]
+                    cv2.line(
+                        self.cut, (self.status['mid'], 0), (self.status['mid'], width), 100, 2)
+                    half_imgs = [self.cut[:, :self.status['mid']],
+                                 self.cut[:, self.status['mid']:]]
+                    # num_imgs = [self.cut_single_word(
+                    #     half_img) for half_img in half_imgs]
+                    data = [self.recognize_number(num_img)
+                            for num_img in half_imgs]
                     self.status['text'] = "".join(data)
+                    logging.info(f"Result: {self.status}")
                     return
         self.status['line_counter'] = -1

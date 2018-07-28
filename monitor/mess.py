@@ -3,6 +3,9 @@ import datetime
 import functools
 import logging
 import logging.handlers
+import time
+
+get_current_time = lambda: time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
 
 def fun_logger(text='Fun_logger'):
     """log function call and result with custom text head"""
