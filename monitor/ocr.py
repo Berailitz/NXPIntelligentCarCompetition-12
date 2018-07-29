@@ -156,8 +156,8 @@ class OCRHandle(object):
     def is_rect_valid(self, dot_list: list) -> bool:
         """ dot_list: sorted [(x, y)]
         """
-        RATIO_THRESHHOLD = 1.4
-        SHORTEST_BOARDER = 200
+        MAX_RATIO = 1.6
+        SHORTEST_BOARDER = 160
         result = True
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
@@ -168,7 +168,7 @@ class OCRHandle(object):
         self.status['width'] = width
         self.status['height'] = height
         self.status['ratio'] = round(1.0 * long_border / short_border, 3)
-        if self.status['ratio'] < RATIO_THRESHHOLD or short_border < SHORTEST_BOARDER:
+        if self.status['ratio'] > MAX_RATIO or short_border < SHORTEST_BOARDER:
             result = False
         return result
 
