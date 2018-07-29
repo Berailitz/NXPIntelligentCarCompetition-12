@@ -1,3 +1,6 @@
+#!/usr/env/python3
+# -*- coding: UTF-8 -*-
+
 import itertools
 import logging
 import math
@@ -165,7 +168,7 @@ class OCRHandle(object):
         self.status['width'] = width
         self.status['height'] = height
         self.status['ratio'] = round(1.0 * long_border / short_border, 3)
-        if self.status['ratio'] > RATIO_THRESHHOLD or short_border < SHORTEST_BOARDER:
+        if self.status['ratio'] < RATIO_THRESHHOLD or short_border < SHORTEST_BOARDER:
             result = False
         return result
 
@@ -190,7 +193,7 @@ class OCRHandle(object):
             rect_points[i] = tuple(dot.tolist())
 
     def get_max_square(self, hori_lines: list, vert_lines: list) -> tuple:
-        MAX_RATIO = 1.4
+        MAX_RATIO = 1.5
         max_square_size = 0
         max_square = None
         for hori_line_pair, vert_line_pair in itertools.product(self.iterate_near(hori_lines), self.iterate_near(vert_lines)):
@@ -231,10 +234,16 @@ class OCRHandle(object):
             z = 0
         return np.array([x, y, z])
 
-    def get_camera_angle(self, transformation_matrix) -> None:
-        camera_matrix = [[333.23782666589585, 0.0, 326.7098847510598], [
-            0.0, 327.9782773488513, 226.56937724451208], [0.0, 0.0, 1.0]]
-        pass
+    def calculate_camera_angle(self, transformation_matrix) -> None:
+        CAMERA_MATRIX = np.array([[333.23782666589585, 0.0, 326.7098847510598], [
+            0.0, 327.9782773488513, 226.56937724451208], [0.0, 0.0, 1.0]], dtype=np.float)
+        num, Rs, Ts, Ns  = cv2.decomposeHomographyMat(transformation_matrix, CAMERA_MATRIX)
+        possible_euler_angles = list(filter(lambda angle_list: angle_list[1] < 0, set(tuple(self.rotationMatrixToEulerAngles(R)) for R in Rs)))
+        if possible_euler_angles:
+            euler_angles = possible_euler_angles[0]
+            self.status['yaw'] = round(euler_angles[2], 3) # 摄像头往左偏了为负
+            self.status['pitch'] = round(euler_angles[1], 3)
+            self.status['roll'] = round(euler_angles[0], 3)
 
     def analyse_img(self, orig):
         self.status = {}
@@ -251,7 +260,7 @@ class OCRHandle(object):
         edges = cv2.Canny(gray, 50, 150)
         lines = cv2.HoughLines(edges, 1, np.pi/180, 150)
         if lines is not None:
-            self.status['raw_line_counter'] = len(lines)
+            self.status['raw_lines'] = len(lines)
             hori_lines, vert_lines = self.filter_lines(lines)
             # logging.info(f"hori_lines: {hori_lines}")
             # logging.info(f"vert_lines: {vert_lines}")
@@ -260,10 +269,10 @@ class OCRHandle(object):
                 if max_square:
                     cv2.drawContours(orig, np.intp(
                         [max_square]), -1, (0, 250, 0), 3)
-                    M = cv2.getPerspectiveTransform(
+                    transformation_matrix = cv2.getPerspectiveTransform(
                         np.float32([max_square]), canvas)
-                    self.get_camera_angle(M)
-                    self.cut = np.invert(cv2.warpPerspective(gray, M, (0, 0)))
+                    self.calculate_camera_angle(transformation_matrix)
+                    self.cut = np.invert(cv2.warpPerspective(gray, transformation_matrix, (0, 0)))
                     self.cut = self.cut[CUT_BOARDER_VERT:-
                                         CUT_BOARDER_VERT, CUT_BOARDER_HORI:-CUT_BOARDER_HORI]
                     retval, self.cut = cv2.threshold(
@@ -277,9 +286,9 @@ class OCRHandle(object):
                                  self.cut[:, self.status['mid']:]]
                     # num_imgs = [self.cut_single_word(
                     #     half_img) for half_img in half_imgs]
-                    data = [self.recognize_number(num_img)
+                    digit_list = [self.recognize_number(num_img)
                             for num_img in half_imgs]
-                    self.status['text'] = "".join(data)
+                    self.status['text'] = "".join(digit_list)
                     logging.info(f"Result: {self.status}")
                     # cv2.imwrite(f"D:\\kites\\Documents\\code\\project\\transportation\\ui\\web\\git\\img_data\\num\\{get_current_time()}_{self.index}_{self.status['text']}.jpg", self.cut)
                     return
