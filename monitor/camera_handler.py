@@ -9,6 +9,8 @@ class CameraUnit(object):
     def __init__(self, video_id):
         self.video_id = video_id
         self.camera = cv2.VideoCapture(video_id)
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         self.ocr_handle = OCRHandle()
         self.frame_index = 0
 

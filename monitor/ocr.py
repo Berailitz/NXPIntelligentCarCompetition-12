@@ -53,101 +53,6 @@ class OCRHandle(object):
             img_m, config='-c tessedit_char_whitelist=0123456789 -psm 10')
         return number
 
-    def check_line_duplication(self, current_list: list, new_r, new_theta) -> bool:
-        is_duplicate = False
-        min_gap_r = 40
-        min_gap_theta = 0.2
-        for current_line in current_list:
-            current_r, current_theta = current_line
-            if abs(current_r - new_r) < min_gap_r and abs(new_theta - current_theta) < min_gap_theta:
-                is_duplicate = True
-                break
-        return is_duplicate
-
-    def get_line_tuple(self, r, theta) -> tuple:
-        a = np.cos(theta)
-        # Stores the value of sin(theta) in b
-        b = np.sin(theta)
-        # x0 stores the value rcos(theta)
-        x0 = a*r
-        # y0 stores the value rsin(theta)
-        y0 = b*r
-        # x1 stores the rounded off value of (rcos(theta)-1000sin(theta))
-        x1 = int(x0 + 1000*(-b))
-        # y1 stores the rounded off value of (rsin(theta)+1000cos(theta))
-        y1 = int(y0 + 1000*(a))
-        # x2 stores the rounded off value of (rcos(theta)+1000sin(theta))
-        x2 = int(x0 - 1000*(-b))
-        # y2 stores the rounded off value of (rsin(theta)-1000cos(theta))
-        y2 = int(y0 - 1000*(a))
-        # cv2.line draws a line in img from the point(x1,y1) to (x2,y2).
-        # (0,0,255) denotes the colour of the line to be
-        #drawn. In this case, it is red.
-        return ((x1, y1), (x2, y2))
-
-    @staticmethod
-    def get_line_angle(line: tuple) -> float:
-        r, theta = line
-        if theta < np.pi * 0.5:
-            return theta + np.pi * 0.5
-        else:
-            return theta - np.pi * 0.5
-
-    def filter_lines(self, lines: list) -> tuple:
-        vert_lines = []
-        hori_lines = []
-        for line in lines:
-            r, theta = line[0]
-            if theta < np.pi * 0.25 or theta > np.pi * 0.75:
-                # 竖线
-                is_duplicate = self.check_line_duplication(
-                    vert_lines, r, theta)
-                if not is_duplicate:
-                    vert_lines.append(line[0])
-                    a, b = self.get_line_in_ab(line[0])
-                    cv2.line(self.orig, *self.get_line_tuple(r,
-                                                             theta), (200, 0, 0), 2)
-                    # print(f"Vert: {(r,theta)}, y = {a} * x + {b}")
-            else:
-                # 横线
-                is_duplicate = self.check_line_duplication(
-                    hori_lines, r, theta)
-                if not is_duplicate:
-                    hori_lines.append(line[0])
-                    a, b = self.get_line_in_ab(line[0])
-                    cv2.line(self.orig, *self.get_line_tuple(r,
-                                                             theta), (200, 0, 0), 2)
-                    # print(f"Hori: {(r,theta)}, y = {a} * x + {b}")
-        return (sorted(hori_lines, key=self.get_line_angle), sorted(vert_lines, key=self.get_line_angle))
-
-    @staticmethod
-    def iterate_near(iterable) -> tuple:
-        iterater = iter(iterable)
-        first = next(iterater)
-        second = next(iterater)
-        while True:
-            yield (first, second)
-            first = second
-            try:
-                second = next(iterater)
-            except StopIteration:
-                break
-
-    @staticmethod
-    def get_line_in_ab(line: tuple) -> tuple():
-        r, theta = line
-        result = None
-        if theta == 0:
-            result = (0, 0)
-        else:
-            result = (- 1.0 / math.tan(theta), r / math.sin(theta))
-        return result
-
-    def get_line_crossing(self, line_1: tuple, line_2: tuple) -> tuple():
-        a_1, b_1 = self.get_line_in_ab(line_1)
-        a_2, b_2 = self.get_line_in_ab(line_2)
-        return (round((b_2 - b_1) / (a_1 - a_2)), round((a_1 * b_2 - a_2 * b_1) / (a_1 - a_2)))
-
     def is_in_image(self, image, x, y) -> bool:
         width = image.shape[1]
         height = image.shape[0]
@@ -156,20 +61,21 @@ class OCRHandle(object):
     def is_rect_valid(self, dot_list: list) -> bool:
         """ dot_list: sorted [(x, y)]
         """
-        MAX_RATIO = 1.6
+        MAX_RATIO = 2
         SHORTEST_BOARDER = 160
-        result = True
+        result = False
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
         width = max(x_list) - min(x_list)
         height = max(y_list) - min(y_list)
         long_border = max(width, height)
         short_border = min(width, height)
-        self.status['width'] = width
-        self.status['height'] = height
-        self.status['ratio'] = round(1.0 * long_border / short_border, 3)
-        if self.status['ratio'] > MAX_RATIO or short_border < SHORTEST_BOARDER:
-            result = False
+        # self.status['width'] = width
+        # self.status['height'] = height
+        if short_border > 0:
+            self.status['ratio'] = round(1.0 * long_border / short_border, 3)
+            if self.status['ratio'] < MAX_RATIO or short_border < SHORTEST_BOARDER:
+                result = True
         return result
 
     @staticmethod
@@ -191,105 +97,85 @@ class OCRHandle(object):
 
         for i, dot in enumerate(rect_points):
             rect_points[i] = tuple(dot.tolist())
+        return rect_points
 
-    def get_max_square(self, hori_lines: list, vert_lines: list) -> tuple:
-        MAX_RATIO = 1.5
-        max_square_size = 0
-        max_square = None
-        for hori_line_pair, vert_line_pair in itertools.product(self.iterate_near(hori_lines), self.iterate_near(vert_lines)):
-            # print(f"line_pairs: {hori_line_pair}, {vert_line_pair}")
-            line_crossings = []  # [(x, y), ..]
-            for hori_line, vert_line in itertools.product(iter(hori_line_pair), iter(vert_line_pair)):
-                x, y = self.get_line_crossing(hori_line, vert_line)
-                if self.is_in_image(self.orig, x, y):
-                    line_crossings.append((x, y))
-            if len(line_crossings) == 4:
-                self.order_points(line_crossings)
-                if self.is_rect_valid(line_crossings):
-                    new_size = cv2.contourArea(np.intp(line_crossings))
-                    # print(f"new size: {new_size}")
-                    if new_size > max_square_size:
-                        max_square_size = new_size
-                        max_square = line_crossings.copy()
-                        # cv2.drawContours(orig, np.intp([max_square]), -1, (255, 0, 0), 3)
-        return max_square
-
-    # Calculates rotation matrix to euler angles
-    # The result is the same as MATLAB except the order
-    # of the euler angles ( x and z are swapped ).
-    # The industry standard is Z-Y-X because that
-    # corresponds to yaw, pitch and roll. See
-    # [picture](https://blog.csdn.net/u012525096/article/details/78890463)
     @staticmethod
-    def rotationMatrixToEulerAngles(R):
-        sy = math.sqrt(R[0, 0] * R[0, 0] + R[1, 0] * R[1, 0])
-        singular = sy < 1e-6
-        if not singular:
-            x = math.atan2(R[2, 1], R[2, 2])
-            y = math.atan2(-R[2, 0], sy)
-            z = math.atan2(R[1, 0], R[0, 0])
-        else:
-            x = math.atan2(-R[1, 2], R[1, 1])
-            y = math.atan2(-R[2, 0], sy)
-            z = 0
-        return np.array([x, y, z])
+    def get_center(rect: list) -> tuple:
+        return (round((rect[0][0] + rect[2][0]) / 2), round((rect[0][1] + rect[2][1]) / 2))
 
-    def calculate_camera_angle(self, transformation_matrix) -> None:
-        CAMERA_MATRIX = np.array([[432.92018461461635, 0.0, 328.8542744949321], [
-                                 0.0, 431.2999010598182, 273.83191275246776], [0.0, 0.0, 1.0]], dtype=np.float)
-        num, Rs, Ts, Ns  = cv2.decomposeHomographyMat(transformation_matrix, CAMERA_MATRIX)
-        possible_euler_angles = list(filter(lambda angle_list: angle_list[1] < 0, set(tuple(self.rotationMatrixToEulerAngles(R)) for R in Rs)))
-        if possible_euler_angles:
-            euler_angles = possible_euler_angles[0]
-            self.status['yaw'] = round(euler_angles[2], 3) # 摄像头往左偏了为负
-            self.status['pitch'] = round(euler_angles[1], 3)
-            self.status['roll'] = round(euler_angles[0], 3)
+    def get_distance(self, target: tuple, base : tuple = None):
+        return (round(target[0] - self.width / 2), round(target[1] - self.height / 2))
+
+    @staticmethod
+    def draw_box(img, dot_list: list) -> None:
+        dots = [tuple(dot) for dot in dot_list]
+        cv2.line(img, dots[0], dots[1], 200, 5)
+        cv2.line(img, dots[1], dots[2], 200, 5)
+        cv2.line(img, dots[2], dots[3], 200, 5)
+        cv2.line(img, dots[3], dots[0], 200, 5)
 
     def analyse_img(self, orig):
         self.status = {}
         self.orig = orig
         self.cut = None
         self.index += 1
-        THRESHHOLD_CUT = 40
-        CUT_BOARDER_VERT = 100
-        CUT_BOARDER_HORI = 100
+
+        THRESHHOLD_GRAY_MAIN = 150
+        THRESHHOLD_GRAY_BLUR = 200
+        MIN_HEIGHT = 300
+        MAX_HEIGHT = 1000
+
         width = orig.shape[1]
+        self.width = width
         height = orig.shape[0]
-        canvas = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
+        self.height = height
+        flood_mask = np.zeros((height + 2, width + 2), np.uint8)
+
+        # canvas = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
         gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, 50, 150)
-        lines = cv2.HoughLines(edges, 1, np.pi/180, 150)
-        if lines is not None:
-            self.status['raw_lines'] = len(lines)
-            hori_lines, vert_lines = self.filter_lines(lines)
-            # logging.info(f"hori_lines: {hori_lines}")
-            # logging.info(f"vert_lines: {vert_lines}")
-            if hori_lines and vert_lines and len(hori_lines) >= 2 and len(vert_lines) >= 2:
-                max_square = self.get_max_square(hori_lines, vert_lines)
-                if max_square:
-                    cv2.drawContours(orig, np.intp(
-                        [max_square]), -1, (0, 250, 0), 3)
-                    transformation_matrix = cv2.getPerspectiveTransform(
-                        np.float32([max_square]), canvas)
-                    self.calculate_camera_angle(transformation_matrix)
-                    self.cut = np.invert(cv2.warpPerspective(gray, transformation_matrix, (0, 0)))
-                    self.cut = self.cut[CUT_BOARDER_VERT:-
-                                        CUT_BOARDER_VERT, CUT_BOARDER_HORI:-CUT_BOARDER_HORI]
-                    retval, self.cut = cv2.threshold(
-                        self.cut, THRESHHOLD_CUT, 255, cv2.THRESH_BINARY)
-                    self.status['line_counter'] = len(
-                        hori_lines) + len(vert_lines)
-                    self.status['mid'] = self.find_mid(self.cut)
-                    cv2.line(
-                        self.cut, (self.status['mid'], 0), (self.status['mid'], width), 100, 2)
-                    half_imgs = [self.cut[:, :self.status['mid']],
-                                 self.cut[:, self.status['mid']:]]
-                    # num_imgs = [self.cut_single_word(
-                    #     half_img) for half_img in half_imgs]
-                    digit_list = [self.recognize_number(num_img)
-                            for num_img in half_imgs]
-                    self.status['text'] = "".join(digit_list)
-                    logging.info(f"Result: {self.status}")
-                    # cv2.imwrite(f"D:\\kites\\Documents\\code\\project\\transportation\\ui\\web\\git\\img_data\\num\\{get_current_time()}_{self.index}_{self.status['text']}.jpg", self.cut)
-                    return
-        self.status['line_counter'] = -1
+        retval, img_bin = cv2.threshold(gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
+        
+        line_1_start = (200, height - 1)
+        line_1_end = (round(0.2 * width - 1), 0)
+        line_2_start = (width - 200, height - 1)
+        line_2_end = (round(0.8 * width - 1), 0)
+        cv2.line(img_bin, line_1_start, line_1_end, 255, 20)
+        cv2.line(img_bin, line_2_start, line_2_end, 255, 20)
+        
+        cv2.floodFill(img_bin, flood_mask, (200, height - 1), 0)
+        cv2.floodFill(img_bin, flood_mask, (width - 200, height - 100), 0)
+        img_bin_blur = cv2.blur(img_bin, (5, 5))
+        retval, img_blur_bin = cv2.threshold(img_bin_blur, THRESHHOLD_GRAY_BLUR, 255, cv2.THRESH_BINARY)
+
+        main_area = img_blur_bin[MIN_HEIGHT:MAX_HEIGHT, :]
+        main_height = main_area.shape[0]
+        main_width = main_area.shape[1]
+        _main_area, contours, _hierarchy = cv2.findContours(main_area, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
+        contours = sorted(contours, key=cv2.contourArea, reverse=True)
+        self.orig = main_area
+
+        num_rects = list(filter(self.is_rect_valid, [cv2.boxPoints(cv2.minAreaRect(cont)) for cont in contours]))[:2]
+        if len(num_rects) == 2:
+            num_rects = list(map(self.order_points, num_rects))
+            num_rects.sort(key=lambda num_rect: num_rect[0][0])
+            centers = list(map(self.get_center, num_rects))
+            # logging.info(f"num_rects: {num_rects}")
+            # logging.info(f"centers: {centers}")
+            self.draw_box(self.orig, num_rects[0])
+            self.draw_box(self.orig, num_rects[1])
+
+            text_center = (round((centers[0][0] + centers[1][0]) / 2), round((centers[0][1] + centers[1][1]) / 2))
+            center_diff = self.get_distance(text_center)
+            self.status['x'] = int(center_diff[0])
+            self.status['y'] = int(center_diff[1])
+
+            num_imgs = []
+            for num_rect in num_rects:
+                box_f = np.float32(num_rect)
+                canvas = np.float32([[0, 0], [main_width,0], [main_width, main_height], [0, main_height]])
+                M = cv2.getPerspectiveTransform(box_f, canvas)
+                num_imgs.append(cv2.warpPerspective(main_area, M, (0, 0)))
+            
+            self.cut = np.hstack((num_imgs[0], num_imgs[1]))
+            self.status['text'] = "".join([self.recognize_number(num_img) for num_img in num_imgs])
+            logging.info(f"Result: {self.status}")
