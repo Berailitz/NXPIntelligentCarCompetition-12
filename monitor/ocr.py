@@ -235,8 +235,8 @@ class OCRHandle(object):
         return np.array([x, y, z])
 
     def calculate_camera_angle(self, transformation_matrix) -> None:
-        CAMERA_MATRIX = np.array([[333.23782666589585, 0.0, 326.7098847510598], [
-            0.0, 327.9782773488513, 226.56937724451208], [0.0, 0.0, 1.0]], dtype=np.float)
+        CAMERA_MATRIX = np.array([[432.92018461461635, 0.0, 328.8542744949321], [
+                                 0.0, 431.2999010598182, 273.83191275246776], [0.0, 0.0, 1.0]], dtype=np.float)
         num, Rs, Ts, Ns  = cv2.decomposeHomographyMat(transformation_matrix, CAMERA_MATRIX)
         possible_euler_angles = list(filter(lambda angle_list: angle_list[1] < 0, set(tuple(self.rotationMatrixToEulerAngles(R)) for R in Rs)))
         if possible_euler_angles:
