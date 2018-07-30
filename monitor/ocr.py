@@ -58,11 +58,12 @@ class OCRHandle(object):
         height = image.shape[0]
         return x > 0 and x < width and y > 0 and y < height
 
-    def is_rect_valid(self, dot_list: list) -> bool:
+    @staticmethod
+    def is_rect_valid(dot_list: list) -> bool:
         """ dot_list: sorted [(x, y)]
         """
-        MAX_RATIO = 2
-        SHORTEST_BOARDER = 160
+        MAX_RATIO = 4
+        SHORTEST_BOARDER = 60
         result = False
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
@@ -73,8 +74,9 @@ class OCRHandle(object):
         # self.status['width'] = width
         # self.status['height'] = height
         if short_border > 0:
-            self.status['ratio'] = round(1.0 * long_border / short_border, 3)
-            if self.status['ratio'] < MAX_RATIO or short_border < SHORTEST_BOARDER:
+            ratio = round(1.0 * long_border / short_border, 3)
+            if ratio < MAX_RATIO and short_border > SHORTEST_BOARDER:
+                # self.status['ratio'] = ratio
                 result = True
         return result
 
@@ -113,17 +115,22 @@ class OCRHandle(object):
         cv2.line(img, dots[1], dots[2], 200, 5)
         cv2.line(img, dots[2], dots[3], 200, 5)
         cv2.line(img, dots[3], dots[0], 200, 5)
+    
+    @staticmethod
+    def contour_to_rect(contour):
+        x, y, w, h = cv2.boundingRect(contour)
+        return [(x, y), (x + w, y), (x, y + h), (x + w, y + h)]
 
     def analyse_img(self, orig):
         self.status = {}
-        self.orig = orig
-        self.cut = None
+        self.videos = {}
         self.index += 1
 
         THRESHHOLD_GRAY_MAIN = 150
         THRESHHOLD_GRAY_BLUR = 200
         MIN_HEIGHT = 300
         MAX_HEIGHT = 1000
+        MARGIN_BUTTOM = 100
 
         width = orig.shape[1]
         self.width = width
@@ -135,15 +142,16 @@ class OCRHandle(object):
         gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
         
-        line_1_start = (200, height - 1)
-        line_1_end = (round(0.2 * width - 1), 0)
-        line_2_start = (width - 200, height - 1)
-        line_2_end = (round(0.8 * width - 1), 0)
+        line_1_start = (MARGIN_BUTTOM, height - 1)
+        line_1_end = (round(0.1 * width - 1), 0)
+        line_2_start = (width - MARGIN_BUTTOM, height - 1)
+        line_2_end = (round(0.9 * width - 1), 0)
         cv2.line(img_bin, line_1_start, line_1_end, 255, 20)
         cv2.line(img_bin, line_2_start, line_2_end, 255, 20)
+        self.videos['video-orig'] = img_bin.copy()
         
-        cv2.floodFill(img_bin, flood_mask, (200, height - 1), 0)
-        cv2.floodFill(img_bin, flood_mask, (width - 200, height - 100), 0)
+        cv2.floodFill(img_bin, flood_mask, (MARGIN_BUTTOM, height - 1), 0)
+        cv2.floodFill(img_bin, flood_mask, (width - MARGIN_BUTTOM, height - 1), 0)
         img_bin_blur = cv2.blur(img_bin, (5, 5))
         retval, img_blur_bin = cv2.threshold(img_bin_blur, THRESHHOLD_GRAY_BLUR, 255, cv2.THRESH_BINARY)
 
@@ -151,21 +159,21 @@ class OCRHandle(object):
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
         _main_area, contours, _hierarchy = cv2.findContours(main_area, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
-        contours = sorted(contours, key=cv2.contourArea, reverse=True)
-        self.orig = main_area
+        contours = sorted(contours, key=lambda cont: cv2.contourArea(cont), reverse=True)
+        self.videos['video-cut'] = main_area
 
-        num_rects = list(filter(self.is_rect_valid, [cv2.boxPoints(cv2.minAreaRect(cont)) for cont in contours]))[:2]
+        num_rects = list(filter(self.is_rect_valid, [self.contour_to_rect(cont) for cont in contours]))[:2]
         if len(num_rects) == 2:
             num_rects = list(map(self.order_points, num_rects))
             num_rects.sort(key=lambda num_rect: num_rect[0][0])
             centers = list(map(self.get_center, num_rects))
             # logging.info(f"num_rects: {num_rects}")
             # logging.info(f"centers: {centers}")
-            self.draw_box(self.orig, num_rects[0])
-            self.draw_box(self.orig, num_rects[1])
+            self.draw_box(self.videos['video-cut'], num_rects[0])
+            self.draw_box(self.videos['video-cut'], num_rects[1])
 
             text_center = (round((centers[0][0] + centers[1][0]) / 2), round((centers[0][1] + centers[1][1]) / 2))
-            center_diff = self.get_distance(text_center)
+            center_diff = (round((text_center[0] - main_width * 0.5)), round((text_center[1] - main_height * 0.5)))
             self.status['x'] = int(center_diff[0])
             self.status['y'] = int(center_diff[1])
 
@@ -176,6 +184,6 @@ class OCRHandle(object):
                 M = cv2.getPerspectiveTransform(box_f, canvas)
                 num_imgs.append(cv2.warpPerspective(main_area, M, (0, 0)))
             
-            self.cut = np.hstack((num_imgs[0], num_imgs[1]))
+            self.videos['video-nums'] = np.hstack((num_imgs[0], num_imgs[1]))
             self.status['text'] = "".join([self.recognize_number(num_img) for num_img in num_imgs])
             logging.info(f"Result: {self.status}")

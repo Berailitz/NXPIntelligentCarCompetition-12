@@ -19,7 +19,8 @@
     margin: 10px;
 }
 
-#video_cut, #video_raw
+#video-cut, #video-orig, #video-nums
 {
-    width: 100%;
+    width: 640px;
+    height: 360px;
 }
