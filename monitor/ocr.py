@@ -28,10 +28,10 @@ class OCRHandle(object):
         y = dot_list[0][1]
         if y < 810:
             SHORTEST_BOARDER = 60 - (810 - dot_list[0][1]) * (20 / 810)
-            MAX_RATIO = 2 + (810 - dot_list[0][1]) * (3 / 810)
+            MAX_RATIO = 2.8 + (810 - dot_list[0][1]) * (2.2 / 810)
         else:
             SHORTEST_BOARDER = 60
-            MAX_RATIO = 2
+            MAX_RATIO = 2.8
         result = False
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
@@ -214,7 +214,7 @@ class OCRHandle(object):
         main_area = self.pre_process_img(raw_img)
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
-        main_center = (round(main_width * 0.5), round(main_height * 0.5))
+        MAIN_CENTER = (round(main_width * 0.5), 855)
         self.videos['video-cut'] = main_area.copy()
 
         sorted_rects = self.get_sorted_rects(main_area)
@@ -231,15 +231,15 @@ class OCRHandle(object):
                     [rect_a, rect_b], key=lambda num_rect: num_rect[0][0])
                 num_imgs = [self.cut_rectangle(
                     main_area, num_rect, CUT_PADDING) for num_rect in num_rects]
-                self.status['text'] = "".join(
-                    [self.recognize_number(num_img) for num_img in num_imgs])
+                text_nums = [self.recognize_number(num_img) for num_img in num_imgs]
+                self.status['text'] = "".join(text_nums)
 
                 text_length = len(self.status['text'])
-                if text_length >= 1 and self.status['text'][0] == '1':
+                if text_nums[0] == '1':
                     rect_width_left = num_rects[0][1][0] - num_rects[0][0][0]
                     num_rects[0][0] = (num_rects[0][0][0] - rect_width_left, num_rects[0][0][1])
                     num_rects[0][3] = (num_rects[0][3][0] - rect_width_left, num_rects[0][3][1])
-                if text_length == 2 and self.status['text'][1] == '1':
+                if text_nums[1] == '1':
                     rect_width_right = num_rects[1][1][0] - num_rects[1][0][0]
                     num_rects[1][1] = (num_rects[1][1][0] + rect_width_right, num_rects[1][1][1])
                     num_rects[1][2] = (num_rects[1][2][0] + rect_width_right, num_rects[1][2][1])
@@ -264,15 +264,15 @@ class OCRHandle(object):
             cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
             text_center = self.get_center(rect_a)
             num_img = self.cut_rectangle(main_area, rect_a, CUT_PADDING)
-            # cv2.imwrite(f"img_data//v5//{self.index}_c_{self.status['text']}.jpg", num_img)
             self.status['text'] = self.recognize_number(num_img)
+            # cv2.imwrite(f"img_data//v5//{self.index}_c_{self.status['text']}.jpg", num_img)
             self.videos['video-num-l'] = num_img
 
         if is_text_found:
             self.status['center'] = text_center
-            center_diff = (text_center[0] - main_center[0],
-                           text_center[1] - main_center[1])
+            center_diff = (text_center[0] - MAIN_CENTER[0],
+                           text_center[1] - MAIN_CENTER[1])
             self.status['position'] = f"({int(center_diff[0])}, {int(center_diff[1])})"
             cv2.line(self.videos['video-cut'],
-                     text_center, main_center, 200, 10)
+                     text_center, MAIN_CENTER, 200, 10)
         logging.info(f"Result: {self.status}")
