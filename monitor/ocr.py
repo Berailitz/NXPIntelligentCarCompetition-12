@@ -220,19 +220,31 @@ class OCRHandle(object):
             if rect_distance < MAX_RECT_DISTANCE:
                 is_text_found = True
                 self.status['rect_distance'] = round(rect_distance, 3)
-                cv2.line(self.videos['video-cut'],
-                         rect_a[0], rect_b[1], 200, 10)
-                cv2.line(self.videos['video-cut'],
-                         rect_a[1], rect_b[0], 200, 10)
+
                 num_rects = sorted(
                     [rect_a, rect_b], key=lambda num_rect: num_rect[0][0])
-                for num_rect in num_rects:
-                    self.draw_box(self.videos['video-cut'], num_rect)
-                text_center = self.find_text_center(main_area, num_rects)
                 num_imgs = [self.cut_rectangle(
                     main_area, num_rect, CUT_PADDING) for num_rect in num_rects]
                 self.status['text'] = "".join(
                     [self.recognize_number(num_img) for num_img in num_imgs])
+                
+                text_length = len(self.status['text'])
+                if text_length >= 1 and self.status['text'][0] == '1':
+                    rect_width_left = num_rects[0][1][0] - num_rects[0][0][0]
+                    num_rects[0][0] = (num_rects[0][0][0] - rect_width_left, num_rects[0][0][1])
+                    num_rects[0][3] = (num_rects[0][3][0] - rect_width_left, num_rects[0][3][1])
+                if text_length == 2 and self.status['text'][1] == '1':
+                    rect_width_right = num_rects[1][1][0] - num_rects[1][0][0]
+                    num_rects[1][0] = (num_rects[1][0][0] + rect_width_right, num_rects[1][0][1])
+                    num_rects[1][3] = (num_rects[1][3][0] + rect_width_right, num_rects[1][3][1])
+
+                cv2.line(self.videos['video-cut'],
+                         rect_a[0], rect_b[1], 200, 10)
+                cv2.line(self.videos['video-cut'],
+                         rect_a[1], rect_b[0], 200, 10)
+                for num_rect in num_rects:
+                    self.draw_box(self.videos['video-cut'], num_rect)
+                text_center = self.find_text_center(main_area, num_rects)
                 self.videos['video-num-l'] = num_imgs[0]
                 self.videos['video-num-r'] = num_imgs[1]
                 # cv2.imwrite(f"img_data//v5//{self.index}_l_{self.status['text'][:1]}.jpg", num_imgs[0])
