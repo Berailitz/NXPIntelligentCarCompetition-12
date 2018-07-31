@@ -17,36 +17,6 @@ class OCRHandle(object):
         self.index = 0
         self.status = {}
 
-    def possible_mids(self, width):
-        mids_left = (x for x in range(round(width * 0.5), 0, -1))
-        mids_right = (x for x in range(round(width * 0.5), width))
-        while True:
-            yield next(mids_left)
-            yield next(mids_right)
-
-    def find_mid(self, img):
-        width = img.shape[1]
-        height = img.shape[0]
-        NOISE_THRESHOLD = 10
-        mid = round(0.5 * width)
-        for x in self.possible_mids(width):
-            noise = 0
-            for y in range(round(height * 0.25), round(height * 0.75)):
-                if img[y, x] == 0:
-                    noise += 1
-            if noise <= NOISE_THRESHOLD:
-                mid = x
-                break
-        return mid
-
-    def cut_single_word(self, raw_word_img):
-        im2, contours_word, hierarchy = cv2.findContours(
-            np.invert(raw_word_img), cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
-        contours_word = sorted(
-            contours_word, key=cv2.contourArea, reverse=True)
-        x, y, w, h = cv2.boundingRect(contours_word[0])
-        return raw_word_img[y:y+h, x:x+w]
-
     def recognize_number(self, img):
         # img_m = cv2.resize(img, (100, 120))
         number = pytesseract.image_to_string(
