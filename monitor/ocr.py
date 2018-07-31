@@ -1,13 +1,11 @@
 #!/usr/env/python3
 # -*- coding: UTF-8 -*-
 
-import itertools
 import logging
 import math
 import cv2
 import numpy as np
 import pytesseract
-from .mess import get_current_time
 
 
 class OCRHandle(object):
@@ -18,7 +16,6 @@ class OCRHandle(object):
         self.status = {}
 
     def recognize_number(self, img):
-        # img_m = cv2.resize(img, (100, 120))
         number = pytesseract.image_to_string(
             img, config='-c tessedit_char_whitelist=0123456789 -psm 10')
         return number
@@ -36,8 +33,6 @@ class OCRHandle(object):
         height = max(y_list) - min(y_list)
         long_border = max(width, height)
         short_border = min(width, height)
-        # self.status['width'] = width
-        # self.status['height'] = height
         if short_border > 0:
             ratio = round(1.0 * long_border / short_border, 3)
             if ratio < MAX_RATIO and short_border > SHORTEST_BOARDER:
@@ -98,12 +93,6 @@ class OCRHandle(object):
         flood_mask = np.zeros(
             (map_height + 2, map_width + 2), np.uint8)
 
-        # triangle_1 = np.array([(1, round(0.4 * map_height - 1)),
-        #                        (round(0.35 * map_width), 1), (1, 1)], dtype=np.int32)
-        # triangle_2 = np.array([(map_width - 1, round(0.4 * map_height - 1)), (round(
-        #     0.65 * map_width), 1), (map_width - 1, 1)], dtype=np.int32)
-        # cv2.fillConvexPoly(img_bin, triangle_1, 255)
-        # cv2.fillConvexPoly(img_bin, triangle_2, 255)
         cv2.line(img_bin, (1, map_height - LINE_WIDTH),
                  (map_width - 1, map_height - LINE_WIDTH), 255, LINE_WIDTH)
         cv2.line(img_bin, (1, LINE_WIDTH),
@@ -113,7 +102,7 @@ class OCRHandle(object):
         cv2.line(img_bin, (map_width - 1, map_height - 1),
                  (map_width - 1, map_height - 1), 255, LINE_WIDTH)
 
-        self.videos['video-orig'] = img_bin.copy()
+        self.videos['video-raw'] = img_bin.copy()
 
         cv2.floodFill(img_bin, flood_mask, (1, round(0.5 * LINE_WIDTH)), 0)
         img_bin_blur = cv2.blur(img_bin, (5, 5))
@@ -164,17 +153,25 @@ class OCRHandle(object):
         x_max, y_max = rect_with_padding[2]
         return img[y_min:y_max, x_min:x_max]
 
-    @staticmethod
-    def reshape_img(raw_img):
-        wide_img = cv2.copyMakeBorder(raw_img, 0, 0, 1000, 1000, cv2.BORDER_CONSTANT)
+    def pre_process_img(self, raw_img):
+        THRESHHOLD_GRAY_MAIN = 180
+        gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
+        retval, img_bin = cv2.threshold(
+            gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
+        wide_img = cv2.copyMakeBorder(
+            img_bin, 0, 0, 1000, 1000, cv2.BORDER_CONSTANT)
         wide_width = wide_img.shape[1]
         wide_height = wide_img.shape[0]
-        cur_window = np.float32([[1700, 0], [2200, 0], [wide_width, wide_height], [0, wide_height]])
-        canvas = np.float32([[0, 0], [wide_width, 0], [wide_width, wide_height], [0, wide_height]])
+        cur_window = np.float32(
+            [[1700, 0], [2200, 0], [wide_width, wide_height], [0, wide_height]])
+        canvas = np.float32(
+            [[0, 0], [wide_width, 0], [wide_width, wide_height], [0, wide_height]])
         transformation_matrix = cv2.getPerspectiveTransform(cur_window, canvas)
         raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0))
-        main_cut = cv2.resize(raw_cut, (700, 1080), interpolation=cv2.INTER_AREA)
-        return main_cut
+        main_cut = cv2.resize(raw_cut, (700, 1080),
+                              interpolation=cv2.INTER_AREA)
+        main_area = self.sweap_map(main_cut)
+        return main_area
 
     @staticmethod
     def get_rect_size(dot_list: list):
@@ -185,86 +182,79 @@ class OCRHandle(object):
     @staticmethod
     def rank_rect(dot_list: list):
         K_SIZE = 1
-        K_Y = 1
+        K_Y = 2
         return OCRHandle.get_center(dot_list)[1] * K_Y + OCRHandle.get_rect_size(dot_list) * K_SIZE
 
-    def analyse_img(self, orig):
+    def get_sorted_rects(self, main_area):
+        _main_area, all_contours, hierarchy = cv2.findContours(
+            main_area, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
+        non_hole_contours = [cont for i, cont in enumerate(
+            all_contours) if hierarchy[0][i][3] == -1]
+        possible_rects = list(filter(self.is_rect_valid, map(
+            self.contour_to_rect, non_hole_contours)))
+        sorted_rects = sorted(possible_rects, key=self.rank_rect, reverse=True)
+        for possible_rect in sorted_rects:
+            self.draw_box(self.videos['video-cut'], possible_rect)
+        return sorted_rects
+
+    def analyse_img(self, raw_img):
         self.status = {}
         self.videos = {}
         self.index += 1
 
-        THRESHHOLD_GRAY_MAIN = 180
-        CUR_PADDING = 10
+        CUT_PADDING = 10
         MAX_RECT_DISTANCE = 200
 
-        # canvas = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
-        gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
-        retval, img_bin = cv2.threshold(
-            gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        main_cut = self.reshape_img(img_bin)
-        main_area = self.sweap_map(main_cut)
+        main_area = self.pre_process_img(raw_img)
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
         main_center = (round(main_width * 0.5), round(main_height * 0.5))
         self.videos['video-cut'] = main_area.copy()
 
-        _main_area, all_contours, hierarchy = cv2.findContours(
-            main_area, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
-        non_hole_contours = [cont for i, cont in enumerate(
-            all_contours) if hierarchy[0][i][3] == -1]
-        possible_rects = list(filter(self.is_rect_valid, map(self.contour_to_rect, non_hole_contours)))
-        sorted_rects = sorted(possible_rects, key=self.rank_rect, reverse=True)
-        for possible_rect in sorted_rects:
-            self.draw_box(self.videos['video-cut'], possible_rect)
+        sorted_rects = self.get_sorted_rects(main_area)
         is_text_found = False
+
         for (rect_a, rect_b) in self.iterate_rect_pairs(sorted_rects):
             rect_distance = min(self.get_distance(
                 rect_a[0], rect_b[1]), self.get_distance(rect_a[1], rect_b[0]))
             if rect_distance < MAX_RECT_DISTANCE:
+                is_text_found = True
+                self.status['rect_distance'] = round(rect_distance, 3)
                 cv2.line(self.videos['video-cut'],
                          rect_a[0], rect_b[1], 200, 10)
                 cv2.line(self.videos['video-cut'],
                          rect_a[1], rect_b[0], 200, 10)
-                num_rects = [rect_a, rect_b]
-                self.status['rect_distance'] = round(rect_distance, 3)
-                num_rects.sort(key=lambda num_rect: num_rect[0][0])
+                num_rects = sorted(
+                    [rect_a, rect_b], key=lambda num_rect: num_rect[0][0])
                 for num_rect in num_rects:
                     self.draw_box(self.videos['video-cut'], num_rect)
                 text_center = self.find_text_center(main_area, num_rects)
-                # logging.info(f"num_rects: {num_rects}")
-                # logging.info(f"centers: {centers}")
-
-                # num_imgs = []
-                # for num_rect in num_rects:
-                #     box_f = np.float32(num_rect)
-                #     canvas = np.float32([[0, 0], [main_width, 0], [main_width, main_height], [0, main_height]])
-                #     M = cv2.getPerspectiveTransform(box_f, canvas)
-                #     num_imgs.append(cv2.warpPerspective(main_area, M, (0, 0)))
                 num_imgs = [self.cut_rectangle(
-                    main_area, num_rect, CUR_PADDING) for num_rect in num_rects]
+                    main_area, num_rect, CUT_PADDING) for num_rect in num_rects]
                 self.status['text'] = "".join(
                     [self.recognize_number(num_img) for num_img in num_imgs])
                 self.videos['video-num-l'] = num_imgs[0]
                 self.videos['video-num-r'] = num_imgs[1]
-                # cv2.imwrite(f"img_data//v4//{self.index}_l_{self.status['text'][:1]}.jpg", num_imgs[0])
-                # cv2.imwrite(f"img_data//v4//{self.index}_r_{self.status['text'][1:]}.jpg", num_imgs[1])
-                is_text_found = True
+                # cv2.imwrite(f"img_data//v5//{self.index}_l_{self.status['text'][:1]}.jpg", num_imgs[0])
+                # cv2.imwrite(f"img_data//v5//{self.index}_r_{self.status['text'][1:]}.jpg", num_imgs[1])
                 break
+
         if not is_text_found and sorted_rects:
             is_text_found = True
             rect_a = sorted_rects[0]
             self.draw_box(self.videos['video-cut'], rect_a)
             cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
             text_center = self.get_center(rect_a)
-            num_img = self.cut_rectangle(main_area, rect_a, CUR_PADDING)
-            # cv2.imwrite(f"img_data//v4//{self.index}_c_{self.status['text']}.jpg", num_img)
+            num_img = self.cut_rectangle(main_area, rect_a, CUT_PADDING)
+            # cv2.imwrite(f"img_data//v5//{self.index}_c_{self.status['text']}.jpg", num_img)
             self.status['text'] = self.recognize_number(num_img)
             self.videos['video-num-l'] = num_img
+
         if is_text_found:
             self.status['center'] = text_center
             center_diff = (text_center[0] - main_center[0],
                            text_center[1] - main_center[1])
-            self.status['(x, y)'] = f"({int(center_diff[0])}, {int(center_diff[1])})"
+            self.status['position'] = f"({int(center_diff[0])}, {int(center_diff[1])})"
             cv2.line(self.videos['video-cut'],
                      text_center, main_center, 200, 10)
         logging.info(f"Result: {self.status}")

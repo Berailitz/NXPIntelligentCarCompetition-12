@@ -19,8 +19,8 @@
     margin: 10px;
 }
 
-#video-cut, #video-orig, #video-nums
+#video-card-raw, #video-card-cut, #video-card-num-l, #video-card-num-r
 {
-    width: 640px;
-    height: 360px;
+    width: auto;
+    max-height: 500px;
 }
