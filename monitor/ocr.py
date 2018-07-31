@@ -57,7 +57,7 @@ class OCRHandle(object):
     def is_rect_valid(dot_list: list) -> bool:
         """ dot_list: sorted [(x, y)]
         """
-        MAX_RATIO = 3
+        MAX_RATIO = 4
         SHORTEST_BOARDER = 60
         result = False
         x_list = [dot[0] for dot in dot_list]
@@ -125,19 +125,20 @@ class OCRHandle(object):
         LINE_WIDTH = 20
         flood_mask = np.zeros((self.camera_height + 2, self.camera_width + 2), np.uint8)
 
-        # line_1_start = (MARGIN_BUTTOM, self.camera_height - 1)
-        # line_1_end = (round(0.05 * self.camera_width - 1), 0)
-        # line_2_start = (self.camera_width - MARGIN_BUTTOM, self.camera_height - 1)
-        # line_2_end = (round(0.95 * self.camera_width - 1), 0)
-        # cv2.line(img_bin, line_1_start, line_1_end, 255, LINE_WIDTH)
-        # cv2.line(img_bin, line_2_start, line_2_end, 255, LINE_WIDTH)
+        triangle_1 = np.array([(1, round(0.4 * self.camera_height - 1)),
+                               (round(0.35 * self.camera_width), 1), (1, 1)], dtype=np.int32)
+        triangle_2 = np.array([(self.camera_width - 1, round(0.4 * self.camera_height - 1)), (round(
+            0.65 * self.camera_width), 1), (self.camera_width - 1, 1)], dtype=np.int32)
+        cv2.fillConvexPoly(img_bin, triangle_1, 255)
+        cv2.fillConvexPoly(img_bin, triangle_2, 255)
         cv2.line(img_bin, (1, self.camera_height - LINE_WIDTH), (self.camera_width - 1, self.camera_height - LINE_WIDTH), 255, LINE_WIDTH)
         cv2.line(img_bin, (1, LINE_WIDTH), (self.camera_width - 1, LINE_WIDTH), 255, LINE_WIDTH)
+        cv2.line(img_bin, (1, round(0.5 * LINE_WIDTH)), (1, self.camera_height - 1), 255, LINE_WIDTH)
+        cv2.line(img_bin, (self.camera_width - 1, self.camera_height - 1), (self.camera_width - 1, self.camera_height - 1), 255, LINE_WIDTH)
 
         self.videos['video-orig'] = img_bin.copy()
 
-        cv2.floodFill(img_bin, flood_mask, (MARGIN_BUTTOM, self.camera_height - 1), 0)
-        cv2.floodFill(img_bin, flood_mask, (self.camera_width - MARGIN_BUTTOM, self.camera_height - 1), 0)
+        cv2.floodFill(img_bin, flood_mask, (1, round(0.5 * LINE_WIDTH)), 0)
         img_bin_blur = cv2.blur(img_bin, (5, 5))
         retval, img_blur_bin = cv2.threshold(img_bin_blur, THRESHHOLD_GRAY_BLUR, 255, cv2.THRESH_BINARY)
         return img_blur_bin
@@ -239,6 +240,8 @@ class OCRHandle(object):
                 self.status['text'] = "".join([self.recognize_number(num_img) for num_img in num_imgs])
                 self.videos['video-num-l'] = num_imgs[0]
                 self.videos['video-num-r'] = num_imgs[1]
+                # cv2.imwrite(f"img_data//v4//{self.index}_l_{self.status['text'][:1]}.jpg", num_imgs[0])
+                # cv2.imwrite(f"img_data//v4//{self.index}_r_{self.status['text'][1:]}.jpg", num_imgs[1])
                 logging.info(f"Result: {self.status}")
                 return
         if possible_rects:
@@ -247,6 +250,7 @@ class OCRHandle(object):
             cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
             self.status['center'] = self.get_center(rect_a)
             num_img = self.cut_rectangle(main_area, rect_a, CUR_PADDING)
+            # cv2.imwrite(f"img_data//v4//{self.index}_c_{self.status['text']}.jpg", num_img)
             self.status['text'] = self.recognize_number(num_img)
             self.videos['video-num-l'] = num_img
             logging.info(f"Result: {self.status}")
