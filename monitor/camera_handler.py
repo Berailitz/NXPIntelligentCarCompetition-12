@@ -20,13 +20,16 @@ class CameraUnit(object):
             'frame_index': self.frame_index, 'num': -1}}
         try:
             res, frame = self.camera.read()
-            if frame is not None:
+            if res:
                 self.ocr_handle.analyse_img(frame)
                 result['status'] = self.ocr_handle.status
                 result['video'] = {}
-                for label, video in self.ocr_handle.videos.items():
-                    retval, buffer = cv2.imencode('.jpg', video)
-                    result['video'][label] = base64.b64encode(buffer).decode('utf-8')
+                try:
+                    for label, video in self.ocr_handle.videos.items():
+                        retval, buffer = cv2.imencode('.jpg', video)
+                        result['video'][label] = base64.b64encode(buffer).decode('utf-8')
+                except:
+                    pass
         except Exception as e:
             logging.exception(e)
         return result

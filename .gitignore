@@ -4,6 +4,7 @@ credentials.py
 .vscode/
 .jupyterrc.py
 camera_calibration/capture.jpg
+video_*.mp4
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

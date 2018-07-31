@@ -17,8 +17,8 @@ def create_app(log_path='log'):
     set_logger(f'{log_path}/log_{get_current_time()}_{os.getpid()}.txt')
     app = web.Application(
         [
-            (r'/live/(?P<video_id>\d+)', IndexHandler),
-            (r'/api/live/(?P<video_id>\d+)', SocketHandler),
+            (r'/live/(?P<video_id>.+)', IndexHandler),
+            (r'/api/live/(?P<video_id>.+)', SocketHandler),
         ],
         static_path=os.path.join(os.path.dirname(__file__), "static"),
         template_path=os.path.join(os.path.dirname(__file__), "templates"))
