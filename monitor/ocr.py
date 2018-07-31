@@ -23,9 +23,15 @@ class OCRHandle(object):
     @staticmethod
     def is_rect_valid(dot_list: list) -> bool:
         """ dot_list: sorted [(x, y)]
+        ***WARNING: ASSUME THE CAMERA HEIGHT IS 1080.***
         """
-        MAX_RATIO = 4
-        SHORTEST_BOARDER = 60
+        y = dot_list[0][1]
+        if y < 810:
+            SHORTEST_BOARDER = 60 - (810 - dot_list[0][1]) * (20 / 810)
+            MAX_RATIO = 2 + (810 - dot_list[0][1]) * (3 / 810)
+        else:
+            SHORTEST_BOARDER = 60
+            MAX_RATIO = 2
         result = False
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
