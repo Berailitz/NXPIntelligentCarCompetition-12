@@ -182,7 +182,7 @@ class OCRHandle(object):
     @staticmethod
     def rank_rect(dot_list: list):
         K_SIZE = 1
-        K_Y = 2
+        K_Y = 100
         return OCRHandle.get_center(dot_list)[1] * K_Y + OCRHandle.get_rect_size(dot_list) * K_SIZE
 
     def get_sorted_rects(self, main_area):
@@ -227,7 +227,7 @@ class OCRHandle(object):
                     main_area, num_rect, CUT_PADDING) for num_rect in num_rects]
                 self.status['text'] = "".join(
                     [self.recognize_number(num_img) for num_img in num_imgs])
-                
+
                 text_length = len(self.status['text'])
                 if text_length >= 1 and self.status['text'][0] == '1':
                     rect_width_left = num_rects[0][1][0] - num_rects[0][0][0]
@@ -235,8 +235,8 @@ class OCRHandle(object):
                     num_rects[0][3] = (num_rects[0][3][0] - rect_width_left, num_rects[0][3][1])
                 if text_length == 2 and self.status['text'][1] == '1':
                     rect_width_right = num_rects[1][1][0] - num_rects[1][0][0]
-                    num_rects[1][0] = (num_rects[1][0][0] + rect_width_right, num_rects[1][0][1])
-                    num_rects[1][3] = (num_rects[1][3][0] + rect_width_right, num_rects[1][3][1])
+                    num_rects[1][1] = (num_rects[1][1][0] + rect_width_right, num_rects[1][1][1])
+                    num_rects[1][2] = (num_rects[1][2][0] + rect_width_right, num_rects[1][2][1])
 
                 cv2.line(self.videos['video-cut'],
                          rect_a[0], rect_b[1], 200, 10)
