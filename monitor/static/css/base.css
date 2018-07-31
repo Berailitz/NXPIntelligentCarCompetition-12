@@ -9,12 +9,7 @@ body
     justify-content: center;
 }
 
-#video-card-raw, #video-card-cut
+img
 {
-    width: 47%;
-}
-
-#video-card-num-r, #video-card-num-l
-{
-    width: 37%;
+    max-width: 100%;
 }

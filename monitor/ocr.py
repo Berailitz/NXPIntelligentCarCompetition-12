@@ -93,23 +93,25 @@ class OCRHandle(object):
         MARGIN_BUTTOM = 60
         THRESHHOLD_GRAY_BLUR = 200
         LINE_WIDTH = 20
+        map_height = img_bin.shape[0]
+        map_width = img_bin.shape[1]
         flood_mask = np.zeros(
-            (self.camera_height + 2, self.camera_width + 2), np.uint8)
+            (map_height + 2, map_width + 2), np.uint8)
 
-        triangle_1 = np.array([(1, round(0.4 * self.camera_height - 1)),
-                               (round(0.35 * self.camera_width), 1), (1, 1)], dtype=np.int32)
-        triangle_2 = np.array([(self.camera_width - 1, round(0.4 * self.camera_height - 1)), (round(
-            0.65 * self.camera_width), 1), (self.camera_width - 1, 1)], dtype=np.int32)
-        cv2.fillConvexPoly(img_bin, triangle_1, 255)
-        cv2.fillConvexPoly(img_bin, triangle_2, 255)
-        cv2.line(img_bin, (1, self.camera_height - LINE_WIDTH),
-                 (self.camera_width - 1, self.camera_height - LINE_WIDTH), 255, LINE_WIDTH)
+        # triangle_1 = np.array([(1, round(0.4 * map_height - 1)),
+        #                        (round(0.35 * map_width), 1), (1, 1)], dtype=np.int32)
+        # triangle_2 = np.array([(map_width - 1, round(0.4 * map_height - 1)), (round(
+        #     0.65 * map_width), 1), (map_width - 1, 1)], dtype=np.int32)
+        # cv2.fillConvexPoly(img_bin, triangle_1, 255)
+        # cv2.fillConvexPoly(img_bin, triangle_2, 255)
+        cv2.line(img_bin, (1, map_height - LINE_WIDTH),
+                 (map_width - 1, map_height - LINE_WIDTH), 255, LINE_WIDTH)
         cv2.line(img_bin, (1, LINE_WIDTH),
-                 (self.camera_width - 1, LINE_WIDTH), 255, LINE_WIDTH)
+                 (map_width - 1, LINE_WIDTH), 255, LINE_WIDTH)
         cv2.line(img_bin, (1, round(0.5 * LINE_WIDTH)),
-                 (1, self.camera_height - 1), 255, LINE_WIDTH)
-        cv2.line(img_bin, (self.camera_width - 1, self.camera_height - 1),
-                 (self.camera_width - 1, self.camera_height - 1), 255, LINE_WIDTH)
+                 (1, map_height - 1), 255, LINE_WIDTH)
+        cv2.line(img_bin, (map_width - 1, map_height - 1),
+                 (map_width - 1, map_height - 1), 255, LINE_WIDTH)
 
         self.videos['video-orig'] = img_bin.copy()
 
@@ -162,6 +164,30 @@ class OCRHandle(object):
         x_max, y_max = rect_with_padding[2]
         return img[y_min:y_max, x_min:x_max]
 
+    @staticmethod
+    def reshape_img(raw_img):
+        wide_img = cv2.copyMakeBorder(raw_img, 0, 0, 1000, 1000, cv2.BORDER_CONSTANT)
+        wide_width = wide_img.shape[1]
+        wide_height = wide_img.shape[0]
+        cur_window = np.float32([[1700, 0], [2200, 0], [wide_width, wide_height], [0, wide_height]])
+        canvas = np.float32([[0, 0], [wide_width, 0], [wide_width, wide_height], [0, wide_height]])
+        transformation_matrix = cv2.getPerspectiveTransform(cur_window, canvas)
+        raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0))
+        main_cut = cv2.resize(raw_cut, (700, 1080), interpolation=cv2.INTER_AREA)
+        return main_cut
+
+    @staticmethod
+    def get_rect_size(dot_list: list):
+        width = dot_list[1][0] - dot_list[0][0]
+        height = dot_list[3][1] - dot_list[0][1]
+        return width * height
+
+    @staticmethod
+    def rank_rect(dot_list: list):
+        K_SIZE = 1
+        K_Y = 1
+        return OCRHandle.get_center(dot_list)[1] * K_Y + OCRHandle.get_rect_size(dot_list) * K_SIZE
+
     def analyse_img(self, orig):
         self.status = {}
         self.videos = {}
@@ -171,16 +197,12 @@ class OCRHandle(object):
         CUR_PADDING = 10
         MAX_RECT_DISTANCE = 200
 
-        width = orig.shape[1]
-        self.camera_width = width
-        height = orig.shape[0]
-        self.camera_height = height
-
         # canvas = np.float32([[0, 0], [width, 0], [width, height], [0, height]])
         gray = cv2.cvtColor(orig, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        main_area = self.sweap_map(img_bin)
+        main_cut = self.reshape_img(img_bin)
+        main_area = self.sweap_map(main_cut)
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
         main_center = (round(main_width * 0.5), round(main_height * 0.5))
@@ -190,13 +212,12 @@ class OCRHandle(object):
             main_area, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS)
         non_hole_contours = [cont for i, cont in enumerate(
             all_contours) if hierarchy[0][i][3] == -1]
-        contours = sorted(non_hole_contours, key=cv2.contourArea, reverse=True)
-        possible_rects = list(
-            filter(self.is_rect_valid, [self.contour_to_rect(cont) for cont in contours]))
-        for possible_rect in possible_rects:
+        possible_rects = list(filter(self.is_rect_valid, map(self.contour_to_rect, non_hole_contours)))
+        sorted_rects = sorted(possible_rects, key=self.rank_rect, reverse=True)
+        for possible_rect in sorted_rects:
             self.draw_box(self.videos['video-cut'], possible_rect)
         is_text_found = False
-        for (rect_a, rect_b) in self.iterate_rect_pairs(possible_rects):
+        for (rect_a, rect_b) in self.iterate_rect_pairs(sorted_rects):
             rect_distance = min(self.get_distance(
                 rect_a[0], rect_b[1]), self.get_distance(rect_a[1], rect_b[0]))
             if rect_distance < MAX_RECT_DISTANCE:
@@ -227,11 +248,11 @@ class OCRHandle(object):
                 self.videos['video-num-r'] = num_imgs[1]
                 # cv2.imwrite(f"img_data//v4//{self.index}_l_{self.status['text'][:1]}.jpg", num_imgs[0])
                 # cv2.imwrite(f"img_data//v4//{self.index}_r_{self.status['text'][1:]}.jpg", num_imgs[1])
-                logging.info(f"Result: {self.status}")
                 is_text_found = True
-        if not is_text_found and possible_rects:
+                break
+        if not is_text_found and sorted_rects:
             is_text_found = True
-            rect_a = possible_rects[0]
+            rect_a = sorted_rects[0]
             self.draw_box(self.videos['video-cut'], rect_a)
             cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
             text_center = self.get_center(rect_a)
