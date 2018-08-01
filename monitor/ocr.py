@@ -1,11 +1,14 @@
 #!/usr/env/python3
 # -*- coding: UTF-8 -*-
 
+import functools
 import logging
 import math
 import cv2
 import numpy as np
+import operator
 import pytesseract
+from skimage.measure import compare_ssim as ssim
 
 
 class OCRHandle(object):
@@ -14,11 +17,29 @@ class OCRHandle(object):
         self.cut = None
         self.index = 0
         self.status = {}
+        self.num_samples = []
+        for i in range(10):
+            self.num_samples.append(cv2.imread(
+                f"D:\\kites\\Documents\\code\\project\\transportation\\ui\\web\\git\\img_data\\v5\\dataset\\{i}.jpg", cv2.IMREAD_GRAYSCALE))
 
     def recognize_number(self, img):
-        number = pytesseract.image_to_string(
-            img, config='-c tessedit_char_whitelist=0123456789 -psm 10')
-        return number
+        STANDARD_SIZE = (120, 150)
+        THRESHHOLD_CONFIDENCE = 0.7
+        PYTESSERACT_CONFIDENCE = 0.8
+        similarities = []
+        for i, sample_img in enumerate(self.num_samples):
+            target_standard = cv2.resize(img, STANDARD_SIZE)
+            similarities.append(ssim(target_standard, sample_img))
+            taget_number, confidence = max(enumerate(similarities), key=operator.itemgetter(1))
+        if confidence < THRESHHOLD_CONFIDENCE:
+            taget_number = pytesseract.image_to_string(
+                img, config='-c tessedit_char_whitelist=0123456789 -psm 10')
+            try:
+                taget_number = int(taget_number)
+            except ValueError:
+                taget_number = -1
+            confidence = PYTESSERACT_CONFIDENCE
+        return taget_number, round(confidence, 3)
 
     @staticmethod
     def is_rect_valid(dot_list: list) -> bool:
@@ -28,9 +49,11 @@ class OCRHandle(object):
         y = dot_list[0][1]
         if y < 810:
             SHORTEST_BOARDER = 60 - (810 - dot_list[0][1]) * (20 / 810)
+            LONGEST_BOARDER = 300 - (810 - dot_list[0][1]) * (100 / 810)
             MAX_RATIO = 2.8 + (810 - dot_list[0][1]) * (2.2 / 810)
         else:
             SHORTEST_BOARDER = 60
+            LONGEST_BOARDER = 350
             MAX_RATIO = 2.8
         result = False
         x_list = [dot[0] for dot in dot_list]
@@ -41,7 +64,7 @@ class OCRHandle(object):
         short_border = min(width, height)
         if short_border > 0:
             ratio = round(1.0 * long_border / short_border, 3)
-            if ratio < MAX_RATIO and short_border > SHORTEST_BOARDER:
+            if ratio < MAX_RATIO and short_border > SHORTEST_BOARDER and long_border < LONGEST_BOARDER:
                 # self.status['ratio'] = ratio
                 result = True
         return result
@@ -215,6 +238,7 @@ class OCRHandle(object):
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
         MAIN_CENTER = (round(main_width * 0.5), 855)
+        ANGLE_BASE = (MAIN_CENTER[0], main_height - 1)
         self.videos['video-cut'] = main_area.copy()
 
         sorted_rects = self.get_sorted_rects(main_area)
@@ -231,15 +255,14 @@ class OCRHandle(object):
                     [rect_a, rect_b], key=lambda num_rect: num_rect[0][0])
                 num_imgs = [self.cut_rectangle(
                     main_area, num_rect, CUT_PADDING) for num_rect in num_rects]
-                text_nums = [self.recognize_number(num_img) for num_img in num_imgs]
-                self.status['text'] = "".join(text_nums)
+                num_list = [self.recognize_number(num_img) for num_img in num_imgs]
+                self.status['confidence'] = min(num_list[0][1], num_list[1][1])
 
-                text_length = len(self.status['text'])
-                if text_nums[0] == '1':
+                if num_list[0][0] == 1:
                     rect_width_left = num_rects[0][1][0] - num_rects[0][0][0]
                     num_rects[0][0] = (num_rects[0][0][0] - rect_width_left, num_rects[0][0][1])
                     num_rects[0][3] = (num_rects[0][3][0] - rect_width_left, num_rects[0][3][1])
-                if text_nums[1] == '1':
+                if num_list[1][0] == 1:
                     rect_width_right = num_rects[1][1][0] - num_rects[1][0][0]
                     num_rects[1][1] = (num_rects[1][1][0] + rect_width_right, num_rects[1][1][1])
                     num_rects[1][2] = (num_rects[1][2][0] + rect_width_right, num_rects[1][2][1])
@@ -264,15 +287,36 @@ class OCRHandle(object):
             cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
             text_center = self.get_center(rect_a)
             num_img = self.cut_rectangle(main_area, rect_a, CUT_PADDING)
-            self.status['text'] = self.recognize_number(num_img)
+            num_list = [self.recognize_number(num_img)]
+            self.status['confidence'] = num_list[0][1]
             # cv2.imwrite(f"img_data//v5//{self.index}_c_{self.status['text']}.jpg", num_img)
             self.videos['video-num-l'] = num_img
 
         if is_text_found:
+            self.status['number'] = functools.reduce(lambda x, y: 10 * x + y[0], num_list, 0)
             self.status['center'] = text_center
             center_diff = (text_center[0] - MAIN_CENTER[0],
                            text_center[1] - MAIN_CENTER[1])
-            self.status['position'] = f"({int(center_diff[0])}, {int(center_diff[1])})"
+            self.status['x'] = int(center_diff[0])
+            self.status['y'] = int(center_diff[1])
+            self.status['angle'] = round(180 / np.pi * math.atan(
+                (text_center[0] - ANGLE_BASE[0]) / (text_center[1] - ANGLE_BASE[1])))
             cv2.line(self.videos['video-cut'],
                      text_center, MAIN_CENTER, 200, 10)
+            cv2.line(self.videos['video-cut'],
+                     text_center, ANGLE_BASE, 200, 10)
+            SERIAL_START_OF_LINE = "by"
+            SERIAL_PORT_LENGTH = 10
+            SERIAL_PORT_TYPE = 0x0A
+            SERIAL_END_OF_LINE = "\r\n"
+            serial_data = SERIAL_START_OF_LINE.encode("ASCII")
+            serial_data += (SERIAL_PORT_LENGTH).to_bytes(1, byteorder='big')
+            serial_data += (SERIAL_PORT_TYPE).to_bytes(1, byteorder='big')
+            serial_data += (self.status['number']).to_bytes(1, byteorder='big', signed=True)
+            serial_data += (self.status['x']).to_bytes(2, byteorder='big', signed=True)
+            serial_data += (self.status['y']).to_bytes(2, byteorder='big', signed=True)
+            serial_data += (self.status['angle']).to_bytes(4, byteorder='big', signed=True)
+            serial_data += SERIAL_END_OF_LINE.encode('ASCII')
+            logging.info(
+                f"Data: `{serial_data}`")
         logging.info(f"Result: {self.status}")
