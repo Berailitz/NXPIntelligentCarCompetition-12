@@ -20,10 +20,10 @@ class OCRHandle(object):
         self.num_samples = []
         for i in range(10):
             self.num_samples.append(cv2.imread(
-                f"D:\\kites\\Documents\\code\\project\\transportation\\ui\\web\\git\\img_data\\v5\\dataset\\{i}.jpg", cv2.IMREAD_GRAYSCALE))
+                f"D:\\kites\\Documents\\code\\project\\transportation\\ui\\web\\git\\img_data\\v5\\dataset_30\\{i}.jpg", cv2.IMREAD_GRAYSCALE))
 
     def recognize_number(self, img):
-        STANDARD_SIZE = (120, 150)
+        STANDARD_SIZE = (30, 30)
         THRESHHOLD_CONFIDENCE = 0.7
         PYTESSERACT_CONFIDENCE = 0.8
         similarities = []
@@ -33,7 +33,7 @@ class OCRHandle(object):
             taget_number, confidence = max(enumerate(similarities), key=operator.itemgetter(1))
         if confidence < THRESHHOLD_CONFIDENCE:
             taget_number = pytesseract.image_to_string(
-                img, config='-c tessedit_char_whitelist=0123456789 -psm 10')
+                target_standard, config='-c tessedit_char_whitelist=0123456789 -psm 10')
             try:
                 taget_number = int(taget_number)
             except ValueError:
@@ -249,7 +249,7 @@ class OCRHandle(object):
                 rect_a[0], rect_b[1]), self.get_distance(rect_a[1], rect_b[0]))
             if rect_distance < MAX_RECT_DISTANCE:
                 is_text_found = True
-                self.status['rect_distance'] = round(rect_distance, 3)
+                # self.status['rect_distance'] = round(rect_distance, 3)
 
                 num_rects = sorted(
                     [rect_a, rect_b], key=lambda num_rect: num_rect[0][0])
@@ -317,6 +317,6 @@ class OCRHandle(object):
             serial_data += (self.status['y']).to_bytes(2, byteorder='big', signed=True)
             serial_data += (self.status['angle']).to_bytes(4, byteorder='big', signed=True)
             serial_data += SERIAL_END_OF_LINE.encode('ASCII')
-            logging.info(
-                f"Data: `{serial_data}`")
+            # logging.info(
+            #     f"Data: `{serial_data}`")
         logging.info(f"Result: {self.status}")
