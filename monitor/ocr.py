@@ -24,7 +24,7 @@ class OCRHandle(object):
 
     def recognize_number(self, img):
         STANDARD_SIZE = (30, 30)
-        THRESHHOLD_CONFIDENCE = 0.7
+        THRESHHOLD_CONFIDENCE = 0.45
         PYTESSERACT_CONFIDENCE = 0.8
         similarities = []
         for i, sample_img in enumerate(self.num_samples):
@@ -48,12 +48,12 @@ class OCRHandle(object):
         """
         y = dot_list[0][1]
         if y < 810:
-            SHORTEST_BOARDER = 60 - (810 - dot_list[0][1]) * (20 / 810)
-            LONGEST_BOARDER = 300 - (810 - dot_list[0][1]) * (100 / 810)
+            SHORTEST_BOARDER = 80 - (810 - dot_list[0][1]) * (20 / 810)
+            LONGEST_BOARDER = 400 - (810 - dot_list[0][1]) * (20 / 810)
             MAX_RATIO = 2.8 + (810 - dot_list[0][1]) * (2.2 / 810)
         else:
-            SHORTEST_BOARDER = 60
-            LONGEST_BOARDER = 350
+            SHORTEST_BOARDER = 80
+            LONGEST_BOARDER = 400
             MAX_RATIO = 2.8
         result = False
         x_list = [dot[0] for dot in dot_list]
@@ -116,7 +116,7 @@ class OCRHandle(object):
     def sweap_map(self, img_bin):
         MARGIN_BUTTOM = 60
         THRESHHOLD_GRAY_BLUR = 200
-        LINE_WIDTH = 20
+        LINE_WIDTH = 5
         map_height = img_bin.shape[0]
         map_width = img_bin.shape[1]
         flood_mask = np.zeros(
@@ -131,7 +131,7 @@ class OCRHandle(object):
         cv2.line(img_bin, (map_width - 1, map_height - 1),
                  (map_width - 1, map_height - 1), 255, LINE_WIDTH)
 
-        self.videos['video-raw'] = img_bin.copy()
+        self.videos['video-bin'] = img_bin.copy()
 
         cv2.floodFill(img_bin, flood_mask, (1, round(0.5 * LINE_WIDTH)), 0)
         img_bin_blur = cv2.blur(img_bin, (5, 5))
@@ -199,6 +199,7 @@ class OCRHandle(object):
         raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0))
         main_cut = cv2.resize(raw_cut, (700, 1080),
                               interpolation=cv2.INTER_AREA)
+        self.videos['video-raw'] = gray.copy()
         main_area = self.sweap_map(main_cut)
         return main_area
 
@@ -237,7 +238,7 @@ class OCRHandle(object):
         main_area = self.pre_process_img(raw_img)
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
-        MAIN_CENTER = (round(main_width * 0.5), 855)
+        MAIN_CENTER = (round(main_width * 0.5), 796)
         ANGLE_BASE = (MAIN_CENTER[0], main_height - 1)
         self.videos['video-cut'] = main_area.copy()
 
@@ -294,7 +295,7 @@ class OCRHandle(object):
 
         if is_text_found:
             self.status['number'] = functools.reduce(lambda x, y: 10 * x + y[0], num_list, 0)
-            self.status['center'] = text_center
+            # self.status['center'] = text_center
             center_diff = (text_center[0] - MAIN_CENTER[0],
                            text_center[1] - MAIN_CENTER[1])
             self.status['x'] = int(center_diff[0])
