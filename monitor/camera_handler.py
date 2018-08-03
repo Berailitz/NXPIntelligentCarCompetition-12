@@ -3,7 +3,7 @@ import base64
 import logging
 import cv2
 import serial
-from .config import IS_SERIAL_ENABLED
+from .config import IS_SERIAL_ENABLED, IS_WEB_ENABLED
 from .credentials import SERIAL_BAUDRATE, SERIAL_PORT
 from .ocr import OCRHandle
 
@@ -35,9 +35,10 @@ class CameraUnit(object):
                 try:
                     if IS_SERIAL_ENABLED:
                         self.ser.write(self.ocr_handle.serial_data)
-                    for label, video in self.ocr_handle.videos.items():
-                        retval, buffer = cv2.imencode('.jpg', video)
-                        result['video'][label] = base64.b64encode(buffer).decode('utf-8')
+                    if IS_WEB_ENABLED:
+                        for label, video in self.ocr_handle.videos.items():
+                            retval, buffer = cv2.imencode('.jpg', video)
+                            result['video'][label] = base64.b64encode(buffer).decode('utf-8')
                 except:
                     pass
         except Exception as e:

@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import pytesseract
 from skimage.measure import compare_ssim as ssim
+from .config import IS_WEB_ENABLED
 from .credentials import DATASET_FOLDER
 
 
@@ -133,7 +134,8 @@ class OCRHandle(object):
         cv2.line(img_bin, (map_width - 1, map_height - 1),
                  (map_width - 1, map_height - 1), 255, LINE_WIDTH)
 
-        self.videos['video-bin'] = img_bin.copy()
+        if IS_WEB_ENABLED:
+            self.videos['video-bin'] = img_bin.copy()
 
         cv2.floodFill(img_bin, flood_mask, (1, round(0.5 * LINE_WIDTH)), 0)
         img_bin_blur = cv2.blur(img_bin, (5, 5))
@@ -201,7 +203,8 @@ class OCRHandle(object):
         raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0))
         main_cut = cv2.resize(raw_cut, (700, 1080),
                               interpolation=cv2.INTER_AREA)
-        self.videos['video-raw'] = gray.copy()
+        if IS_WEB_ENABLED:
+            self.videos['video-raw'] = gray.copy()
         main_area = self.sweap_map(main_cut)
         return main_area
 
@@ -225,8 +228,9 @@ class OCRHandle(object):
         possible_rects = list(filter(self.is_rect_valid, map(
             self.contour_to_rect, non_hole_contours)))
         sorted_rects = sorted(possible_rects, key=self.rank_rect, reverse=True)
-        for possible_rect in sorted_rects:
-            self.draw_box(self.videos['video-cut'], possible_rect)
+        if IS_WEB_ENABLED:
+            for possible_rect in sorted_rects:
+                self.draw_box(self.videos['video-cut'], possible_rect)
         return sorted_rects
 
     def analyse_img(self, raw_img):
@@ -242,7 +246,8 @@ class OCRHandle(object):
         main_width = main_area.shape[1]
         MAIN_CENTER = (round(main_width * 0.5), 796)
         ANGLE_BASE = (MAIN_CENTER[0], main_height - 1)
-        self.videos['video-cut'] = main_area.copy()
+        if IS_WEB_ENABLED:
+            self.videos['video-cut'] = main_area.copy()
 
         sorted_rects = self.get_sorted_rects(main_area)
         is_text_found = False
@@ -270,15 +275,16 @@ class OCRHandle(object):
                     num_rects[1][1] = (num_rects[1][1][0] + rect_width_right, num_rects[1][1][1])
                     num_rects[1][2] = (num_rects[1][2][0] + rect_width_right, num_rects[1][2][1])
 
-                cv2.line(self.videos['video-cut'],
-                         rect_a[0], rect_b[1], 200, 10)
-                cv2.line(self.videos['video-cut'],
-                         rect_a[1], rect_b[0], 200, 10)
-                for num_rect in num_rects:
-                    self.draw_box(self.videos['video-cut'], num_rect)
                 text_center = self.find_text_center(main_area, num_rects)
-                self.videos['video-num-l'] = num_imgs[0]
-                self.videos['video-num-r'] = num_imgs[1]
+                if IS_WEB_ENABLED:
+                    cv2.line(self.videos['video-cut'],
+                            rect_a[0], rect_b[1], 200, 10)
+                    cv2.line(self.videos['video-cut'],
+                            rect_a[1], rect_b[0], 200, 10)
+                    for num_rect in num_rects:
+                        self.draw_box(self.videos['video-cut'], num_rect)
+                    self.videos['video-num-l'] = num_imgs[0]
+                    self.videos['video-num-r'] = num_imgs[1]
                 # cv2.imwrite(f"img_data//v5//{self.index}_l_{self.status['text'][:1]}.jpg", num_imgs[0])
                 # cv2.imwrite(f"img_data//v5//{self.index}_r_{self.status['text'][1:]}.jpg", num_imgs[1])
                 break
@@ -286,14 +292,16 @@ class OCRHandle(object):
         if not is_text_found and sorted_rects:
             is_text_found = True
             rect_a = sorted_rects[0]
-            self.draw_box(self.videos['video-cut'], rect_a)
-            cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
+            if IS_WEB_ENABLED:
+                self.draw_box(self.videos['video-cut'], rect_a)
+                cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
             text_center = self.get_center(rect_a)
             num_img = self.cut_rectangle(main_area, rect_a, CUT_PADDING)
             num_list = [self.recognize_number(num_img)]
             self.status['confidence'] = num_list[0][1]
             # cv2.imwrite(f"img_data//v5//{self.index}_c_{self.status['text']}.jpg", num_img)
-            self.videos['video-num-l'] = num_img
+            if IS_WEB_ENABLED:
+                self.videos['video-num-l'] = num_img
 
         if is_text_found:
             self.status['number'] = functools.reduce(lambda x, y: 10 * x + y[0], num_list, 0)
@@ -304,10 +312,11 @@ class OCRHandle(object):
             self.status['y'] = int(center_diff[1])
             self.status['angle'] = round(180 / np.pi * math.atan(
                 (text_center[0] - ANGLE_BASE[0]) / (text_center[1] - ANGLE_BASE[1])))
-            cv2.line(self.videos['video-cut'],
-                     text_center, MAIN_CENTER, 200, 10)
-            cv2.line(self.videos['video-cut'],
-                     text_center, ANGLE_BASE, 200, 10)
+            if IS_WEB_ENABLED:
+                cv2.line(self.videos['video-cut'],
+                        text_center, MAIN_CENTER, 200, 10)
+                cv2.line(self.videos['video-cut'],
+                        text_center, ANGLE_BASE, 200, 10)
             SERIAL_START_OF_LINE = "by"
             SERIAL_PORT_LENGTH = 10
             SERIAL_PORT_TYPE = 0x0A
