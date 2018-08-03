@@ -5,6 +5,7 @@ import functools
 import logging
 import math
 import operator
+import os
 import cv2
 import numpy as np
 import pytesseract
@@ -22,7 +23,7 @@ class OCRHandle(object):
         self.serial_data = b''
         for i in range(10):
             self.num_samples.append(cv2.imread(
-                f"{DATASET_FOLDER}\\{i}.jpg", cv2.IMREAD_GRAYSCALE))
+                os.path.join(DATASET_FOLDER, f"{i}.jpg"), cv2.IMREAD_GRAYSCALE))
 
     def recognize_number(self, img):
         STANDARD_SIZE = (30, 30)
