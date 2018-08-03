@@ -14,13 +14,17 @@ class CameraUnit(object):
             self.video_id = int(video_id)
         except ValueError:
             self.video_id = video_id
-        self.camera = cv2.VideoCapture(self.video_id)
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        self.camera = None
+        self.open_camera()
         self.ocr_handle = OCRHandle()
         self.frame_index = 0
         if IS_SERIAL_ENABLED:
             self.ser = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE)
+
+    def open_camera(self):
+        self.camera = cv2.VideoCapture(self.video_id)
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
     def detect_video(self):
         self.frame_index += 1
@@ -41,6 +45,9 @@ class CameraUnit(object):
                             result['video'][label] = base64.b64encode(buffer).decode('utf-8')
                 except:
                     pass
+            else:
+                logging.warning("No frame read.")
+                self.open_camera()
         except Exception as e:
             logging.exception(e)
         return result
