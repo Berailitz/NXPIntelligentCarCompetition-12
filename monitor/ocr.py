@@ -4,11 +4,12 @@
 import functools
 import logging
 import math
+import operator
 import cv2
 import numpy as np
-import operator
 import pytesseract
 from skimage.measure import compare_ssim as ssim
+from .credentials import DATASET_FOLDER
 
 
 class OCRHandle(object):
@@ -20,7 +21,7 @@ class OCRHandle(object):
         self.num_samples = []
         for i in range(10):
             self.num_samples.append(cv2.imread(
-                f"D:\\kites\\Documents\\code\\project\\transportation\\ui\\web\\git\\img_data\\v5\\dataset_30\\{i}.jpg", cv2.IMREAD_GRAYSCALE))
+                f"{DATASET_FOLDER}\\{i}.jpg", cv2.IMREAD_GRAYSCALE))
 
     def recognize_number(self, img):
         STANDARD_SIZE = (30, 30)
@@ -114,7 +115,6 @@ class OCRHandle(object):
                 yield (left_value, right_value)
 
     def sweap_map(self, img_bin):
-        MARGIN_BUTTOM = 60
         THRESHHOLD_GRAY_BLUR = 200
         LINE_WIDTH = 5
         map_height = img_bin.shape[0]
