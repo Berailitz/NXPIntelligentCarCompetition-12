@@ -19,6 +19,7 @@ class OCRHandle(object):
         self.index = 0
         self.status = {}
         self.num_samples = []
+        self.serial_data = b''
         for i in range(10):
             self.num_samples.append(cv2.imread(
                 f"{DATASET_FOLDER}\\{i}.jpg", cv2.IMREAD_GRAYSCALE))
@@ -318,6 +319,5 @@ class OCRHandle(object):
             serial_data += (self.status['y']).to_bytes(2, byteorder='big', signed=True)
             serial_data += (self.status['angle']).to_bytes(4, byteorder='big', signed=True)
             serial_data += SERIAL_END_OF_LINE.encode('ASCII')
-            # logging.info(
-            #     f"Data: `{serial_data}`")
+            self.serial_data = serial_data
         logging.info(f"Result: {self.status}")

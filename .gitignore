@@ -1,5 +1,6 @@
 log/
 img_data/
+config.py
 credentials.py
 .vscode/
 .jupyterrc.py

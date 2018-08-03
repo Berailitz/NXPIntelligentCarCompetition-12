@@ -2,6 +2,9 @@ from collections import defaultdict
 import base64
 import logging
 import cv2
+import serial
+from .config import IS_SERIAL_ENABLED
+from .credentials import SERIAL_BAUDRATE, SERIAL_PORT
 from .ocr import OCRHandle
 
 
@@ -16,6 +19,8 @@ class CameraUnit(object):
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         self.ocr_handle = OCRHandle()
         self.frame_index = 0
+        if IS_SERIAL_ENABLED:
+            self.ser = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE)
 
     def detect_video(self):
         self.frame_index += 1
@@ -28,6 +33,8 @@ class CameraUnit(object):
                 result['status'] = self.ocr_handle.status
                 result['video'] = {}
                 try:
+                    if IS_SERIAL_ENABLED:
+                        self.ser.write(self.ocr_handle.serial_data)
                     for label, video in self.ocr_handle.videos.items():
                         retval, buffer = cv2.imencode('.jpg', video)
                         result['video'][label] = base64.b64encode(buffer).decode('utf-8')
@@ -40,6 +47,8 @@ class CameraUnit(object):
     def __del__(self):
         logging.warning(f"Closing camera `{self.video_id}`.")
         self.camera.release()
+        if IS_SERIAL_ENABLED:
+            self.ser.close()
 
 
 class CameraHandler(defaultdict):
