@@ -200,7 +200,7 @@ class OCRHandle(object):
         canvas = np.float32(
             [[0, 0], [wide_width, 0], [wide_width, wide_height], [0, wide_height]])
         transformation_matrix = cv2.getPerspectiveTransform(cur_window, canvas)
-        raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0))
+        raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0), flags=cv2.INTER_NEAREST)
         main_cut = cv2.resize(raw_cut, (700, 1080),
                               interpolation=cv2.INTER_AREA)
         if IS_WEB_ENABLED:
