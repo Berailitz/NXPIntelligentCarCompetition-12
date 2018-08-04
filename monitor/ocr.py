@@ -32,7 +32,7 @@ class OCRHandle(object):
         PYTESSERACT_CONFIDENCE = 0.8
         similarities = []
         for i, sample_img in enumerate(self.num_samples):
-            target_standard = cv2.resize(img, STANDARD_SIZE)
+            target_standard = cv2.resize(img, STANDARD_SIZE, interpolation=cv2.INTER_LINEAR)
             similarities.append(ssim(target_standard, sample_img))
             taget_number, confidence = max(enumerate(similarities), key=operator.itemgetter(1))
         if confidence < THRESHHOLD_CONFIDENCE:
@@ -201,8 +201,7 @@ class OCRHandle(object):
             [[0, 0], [wide_width, 0], [wide_width, wide_height], [0, wide_height]])
         transformation_matrix = cv2.getPerspectiveTransform(cur_window, canvas)
         raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0), flags=cv2.INTER_NEAREST)
-        main_cut = cv2.resize(raw_cut, (700, 1080),
-                              interpolation=cv2.INTER_AREA)
+        main_cut = cv2.resize(raw_cut, (700, 1080), interpolation=cv2.INTER_LINEAR)
         if IS_WEB_ENABLED:
             self.videos['video-raw'] = gray.copy()
         main_area = self.sweap_map(main_cut)
