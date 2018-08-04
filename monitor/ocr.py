@@ -28,11 +28,11 @@ class OCRHandle(object):
 
     def recognize_number(self, img):
         STANDARD_SIZE = (30, 30)
-        THRESHHOLD_CONFIDENCE = 0.45
+        THRESHHOLD_CONFIDENCE = 0
         PYTESSERACT_CONFIDENCE = 0.8
         similarities = []
         for i, sample_img in enumerate(self.num_samples):
-            target_standard = cv2.resize(img, STANDARD_SIZE)
+            target_standard = cv2.resize(img, STANDARD_SIZE, interpolation=cv2.INTER_LINEAR)
             similarities.append(ssim(target_standard, sample_img))
             taget_number, confidence = max(enumerate(similarities), key=operator.itemgetter(1))
         if confidence < THRESHHOLD_CONFIDENCE:
@@ -51,14 +51,9 @@ class OCRHandle(object):
         ***WARNING: ASSUME THE CAMERA HEIGHT IS 1080.***
         """
         y = dot_list[0][1]
-        if y < 810:
-            SHORTEST_BOARDER = 80 - (810 - dot_list[0][1]) * (20 / 810)
-            LONGEST_BOARDER = 400 - (810 - dot_list[0][1]) * (20 / 810)
-            MAX_RATIO = 2.8 + (810 - dot_list[0][1]) * (2.2 / 810)
-        else:
-            SHORTEST_BOARDER = 80
-            LONGEST_BOARDER = 400
-            MAX_RATIO = 2.8
+        SHORTEST_BOARDER = 7
+        LONGEST_BOARDER = 70
+        MAX_RATIO = 7
         result = False
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
@@ -101,10 +96,10 @@ class OCRHandle(object):
     @staticmethod
     def draw_box(img, dot_list: list) -> None:
         dots = [tuple(dot) for dot in dot_list]
-        cv2.line(img, dots[0], dots[1], 200, 5)
-        cv2.line(img, dots[1], dots[2], 200, 5)
-        cv2.line(img, dots[2], dots[3], 200, 5)
-        cv2.line(img, dots[3], dots[0], 200, 5)
+        cv2.line(img, dots[0], dots[1], 200, 2)
+        cv2.line(img, dots[1], dots[2], 200, 2)
+        cv2.line(img, dots[2], dots[3], 200, 2)
+        cv2.line(img, dots[3], dots[0], 200, 2)
 
     @staticmethod
     def contour_to_rect(contour):
@@ -119,7 +114,7 @@ class OCRHandle(object):
 
     def sweap_map(self, img_bin):
         THRESHHOLD_GRAY_BLUR = 200
-        LINE_WIDTH = 5
+        LINE_WIDTH = 2
         map_height = img_bin.shape[0]
         map_width = img_bin.shape[1]
         flood_mask = np.zeros(
@@ -192,17 +187,17 @@ class OCRHandle(object):
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
         wide_img = cv2.copyMakeBorder(
-            img_bin, 0, 0, 1000, 1000, cv2.BORDER_CONSTANT)
+            img_bin, 0, 0, 300, 300, cv2.BORDER_CONSTANT)
         wide_width = wide_img.shape[1]
         wide_height = wide_img.shape[0]
         cur_window = np.float32(
-            [[1700, 0], [2200, 0], [wide_width, wide_height], [0, wide_height]])
+            [[440, 0], [640, 0], [wide_width, wide_height], [0, wide_height]])
         canvas = np.float32(
             [[0, 0], [wide_width, 0], [wide_width, wide_height], [0, wide_height]])
         transformation_matrix = cv2.getPerspectiveTransform(cur_window, canvas)
         raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0), flags=cv2.INTER_NEAREST)
-        main_cut = cv2.resize(raw_cut, (700, 1080),
-                              interpolation=cv2.INTER_AREA)
+        main_cut = cv2.resize(raw_cut, (200, 270),
+                              interpolation=cv2.INTER_LINEAR)
         if IS_WEB_ENABLED:
             self.videos['video-raw'] = gray.copy()
         main_area = self.sweap_map(main_cut)
@@ -239,12 +234,12 @@ class OCRHandle(object):
         self.index += 1
 
         CUT_PADDING = 10
-        MAX_RECT_DISTANCE = 200
+        MAX_RECT_DISTANCE = 50
 
         main_area = self.pre_process_img(raw_img)
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
-        MAIN_CENTER = (round(main_width * 0.5), 796)
+        MAIN_CENTER = (round(main_width * 0.5), 190)
         ANGLE_BASE = (MAIN_CENTER[0], main_height - 1)
         if IS_WEB_ENABLED:
             self.videos['video-cut'] = main_area.copy()
@@ -278,9 +273,9 @@ class OCRHandle(object):
                 text_center = self.find_text_center(main_area, num_rects)
                 if IS_WEB_ENABLED:
                     cv2.line(self.videos['video-cut'],
-                            rect_a[0], rect_b[1], 200, 10)
+                            rect_a[0], rect_b[1], 200, 2)
                     cv2.line(self.videos['video-cut'],
-                            rect_a[1], rect_b[0], 200, 10)
+                            rect_a[1], rect_b[0], 200, 2)
                     for num_rect in num_rects:
                         self.draw_box(self.videos['video-cut'], num_rect)
                     self.videos['video-num-l'] = num_imgs[0]
@@ -294,7 +289,7 @@ class OCRHandle(object):
             rect_a = sorted_rects[0]
             if IS_WEB_ENABLED:
                 self.draw_box(self.videos['video-cut'], rect_a)
-                cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
+                cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 2)
             text_center = self.get_center(rect_a)
             num_img = self.cut_rectangle(main_area, rect_a, CUT_PADDING)
             num_list = [self.recognize_number(num_img)]
@@ -314,9 +309,9 @@ class OCRHandle(object):
                 (text_center[0] - ANGLE_BASE[0]) / (text_center[1] - ANGLE_BASE[1])))
             if IS_WEB_ENABLED:
                 cv2.line(self.videos['video-cut'],
-                        text_center, MAIN_CENTER, 200, 10)
+                        text_center, MAIN_CENTER, 200, 2)
                 cv2.line(self.videos['video-cut'],
-                        text_center, ANGLE_BASE, 200, 10)
+                        text_center, ANGLE_BASE, 200, 2)
             SERIAL_START_OF_LINE = "by"
             SERIAL_PORT_LENGTH = 10
             SERIAL_PORT_TYPE = 0x0A
