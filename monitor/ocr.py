@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import functools
+import json
 import logging
 import math
 import operator
@@ -11,7 +12,7 @@ import numpy as np
 import pytesseract
 from skimage.measure import compare_ssim as ssim
 from .config import IS_WEB_ENABLED
-from .credentials import DATASET_FOLDER
+from .credentials import DATASET_FOLDER, PERSPECTIVE_TRANSFORM_MAP_FILE_PATH
 
 
 class OCRHandle(object):
@@ -22,6 +23,8 @@ class OCRHandle(object):
         self.status = {}
         self.num_samples = []
         self.serial_data = b''
+        with open(PERSPECTIVE_TRANSFORM_MAP_FILE_PATH) as f:
+            self.perspective_transform_map = json.load(f)
         for i in range(10):
             self.num_samples.append(cv2.imread(
                 os.path.join(DATASET_FOLDER, f"{i}.jpg"), cv2.IMREAD_GRAYSCALE))
@@ -51,14 +54,9 @@ class OCRHandle(object):
         ***WARNING: ASSUME THE CAMERA HEIGHT IS 1080.***
         """
         y = dot_list[0][1]
-        if y < 810:
-            SHORTEST_BOARDER = 80 - (810 - dot_list[0][1]) * (20 / 810)
-            LONGEST_BOARDER = 400 - (810 - dot_list[0][1]) * (20 / 810)
-            MAX_RATIO = 2.8 + (810 - dot_list[0][1]) * (2.2 / 810)
-        else:
-            SHORTEST_BOARDER = 80
-            LONGEST_BOARDER = 400
-            MAX_RATIO = 2.8
+        SHORTEST_BOARDER = 40
+        LONGEST_BOARDER = 300
+        MAX_RATIO = 6.5
         result = False
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
@@ -191,17 +189,13 @@ class OCRHandle(object):
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        wide_img = cv2.copyMakeBorder(
-            img_bin, 0, 0, 1000, 1000, cv2.BORDER_CONSTANT)
-        wide_width = wide_img.shape[1]
-        wide_height = wide_img.shape[0]
-        cur_window = np.float32(
-            [[1700, 0], [2200, 0], [wide_width, wide_height], [0, wide_height]])
-        canvas = np.float32(
-            [[0, 0], [wide_width, 0], [wide_width, wide_height], [0, wide_height]])
-        transformation_matrix = cv2.getPerspectiveTransform(cur_window, canvas)
-        raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0), flags=cv2.INTER_NEAREST)
-        main_cut = cv2.resize(raw_cut, (700, 1080), interpolation=cv2.INTER_LINEAR)
+        main_cut = np.zeros((1080, 490), dtype=np.uint8)
+        for new_x in range(490):
+            for new_y in range(1080):
+                old_position = self.perspective_transform_map[new_x][new_y]
+                if old_position:
+                    old_x, old_y = old_position
+                    main_cut[new_y, new_x] = gray[old_y, old_x]
         if IS_WEB_ENABLED:
             self.videos['video-raw'] = gray.copy()
         main_area = self.sweap_map(main_cut)
