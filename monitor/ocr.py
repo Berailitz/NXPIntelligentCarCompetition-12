@@ -31,7 +31,7 @@ class OCRHandle(object):
 
     def recognize_number(self, img):
         STANDARD_SIZE = (30, 30)
-        THRESHHOLD_CONFIDENCE = 0.45
+        THRESHHOLD_CONFIDENCE = 0
         PYTESSERACT_CONFIDENCE = 0.8
         similarities = []
         for i, sample_img in enumerate(self.num_samples):
@@ -54,8 +54,8 @@ class OCRHandle(object):
         ***WARNING: ASSUME THE CAMERA HEIGHT IS 1080.***
         """
         y = dot_list[0][1]
-        SHORTEST_BOARDER = 40
-        LONGEST_BOARDER = 300
+        SHORTEST_BOARDER = 20
+        LONGEST_BOARDER = 150
         MAX_RATIO = 6.5
         result = False
         x_list = [dot[0] for dot in dot_list]
@@ -117,7 +117,7 @@ class OCRHandle(object):
 
     def sweap_map(self, img_bin):
         THRESHHOLD_GRAY_BLUR = 200
-        LINE_WIDTH = 5
+        LINE_WIDTH = 3
         map_height = img_bin.shape[0]
         map_width = img_bin.shape[1]
         flood_mask = np.zeros(
@@ -185,13 +185,13 @@ class OCRHandle(object):
         return img[y_min:y_max, x_min:x_max]
 
     def pre_process_img(self, raw_img):
-        THRESHHOLD_GRAY_MAIN = 180
+        THRESHHOLD_GRAY_MAIN = 170
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        main_cut = np.zeros((1080, 490), dtype=np.uint8)
-        for new_x in range(490):
-            for new_y in range(1080):
+        main_cut = np.zeros((540, 245), dtype=np.uint8)
+        for new_x in range(245):
+            for new_y in range(540):
                 old_position = self.perspective_transform_map[new_x][new_y]
                 if old_position:
                     old_x, old_y = old_position
@@ -232,12 +232,12 @@ class OCRHandle(object):
         self.index += 1
 
         CUT_PADDING = 10
-        MAX_RECT_DISTANCE = 200
+        MAX_RECT_DISTANCE = 100
 
         main_area = self.pre_process_img(raw_img)
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
-        MAIN_CENTER = (round(main_width * 0.5), 796)
+        MAIN_CENTER = (round(main_width * 0.5), 420)
         ANGLE_BASE = (MAIN_CENTER[0], main_height - 1)
         if IS_WEB_ENABLED:
             self.videos['video-cut'] = main_area.copy()
@@ -271,9 +271,9 @@ class OCRHandle(object):
                 text_center = self.find_text_center(main_area, num_rects)
                 if IS_WEB_ENABLED:
                     cv2.line(self.videos['video-cut'],
-                            rect_a[0], rect_b[1], 200, 10)
+                            rect_a[0], rect_b[1], 200, 4)
                     cv2.line(self.videos['video-cut'],
-                            rect_a[1], rect_b[0], 200, 10)
+                            rect_a[1], rect_b[0], 200, 4)
                     for num_rect in num_rects:
                         self.draw_box(self.videos['video-cut'], num_rect)
                     self.videos['video-num-l'] = num_imgs[0]
@@ -287,7 +287,7 @@ class OCRHandle(object):
             rect_a = sorted_rects[0]
             if IS_WEB_ENABLED:
                 self.draw_box(self.videos['video-cut'], rect_a)
-                cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
+                cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 4)
             text_center = self.get_center(rect_a)
             num_img = self.cut_rectangle(main_area, rect_a, CUT_PADDING)
             num_list = [self.recognize_number(num_img)]
@@ -307,9 +307,9 @@ class OCRHandle(object):
                 (text_center[0] - ANGLE_BASE[0]) / (text_center[1] - ANGLE_BASE[1])))
             if IS_WEB_ENABLED:
                 cv2.line(self.videos['video-cut'],
-                        text_center, MAIN_CENTER, 200, 10)
+                        text_center, MAIN_CENTER, 200, 4)
                 cv2.line(self.videos['video-cut'],
-                        text_center, ANGLE_BASE, 200, 10)
+                        text_center, ANGLE_BASE, 200, 4)
             SERIAL_START_OF_LINE = "by"
             SERIAL_PORT_LENGTH = 10
             SERIAL_PORT_TYPE = 0x0A
