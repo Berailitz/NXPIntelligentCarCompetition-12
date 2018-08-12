@@ -321,12 +321,12 @@ class OCRHandle(object):
             SERIAL_PORT_TYPE = 0x0A
             SERIAL_END_OF_LINE = "\r\n"
             serial_data = SERIAL_START_OF_LINE.encode("ASCII")
-            serial_data += (SERIAL_PORT_LENGTH).to_bytes(1, byteorder='big')
-            serial_data += (SERIAL_PORT_TYPE).to_bytes(1, byteorder='big')
-            serial_data += (self.status['number']).to_bytes(1, byteorder='big', signed=True)
-            serial_data += (self.status['x']).to_bytes(2, byteorder='big', signed=True)
-            serial_data += (self.status['y']).to_bytes(2, byteorder='big', signed=True)
-            serial_data += (self.status['angle']).to_bytes(4, byteorder='big', signed=True)
+            serial_data += (SERIAL_PORT_LENGTH).to_bytes(1, byteorder='little')
+            serial_data += (SERIAL_PORT_TYPE).to_bytes(1, byteorder='little')
+            serial_data += (self.status['number']).to_bytes(1, byteorder='little', signed=True)
+            serial_data += (self.status['x']).to_bytes(2, byteorder='little', signed=True)
+            serial_data += (self.status['y']).to_bytes(2, byteorder='little', signed=True)
+            serial_data += (self.status['angle']).to_bytes(4, byteorder='little', signed=True)
             serial_data += SERIAL_END_OF_LINE.encode('ASCII')
             self.serial_data = serial_data
         logging.info(f"Result: {self.status}")
