@@ -6,6 +6,7 @@ import logging
 import math
 import operator
 import os
+import struct
 import cv2
 import numpy as np
 import pytesseract
@@ -41,7 +42,7 @@ class OCRHandle(object):
             try:
                 taget_number = int(taget_number)
             except ValueError:
-                taget_number = -1
+                taget_number = 0
             confidence = PYTESSERACT_CONFIDENCE
         return taget_number, round(confidence, 3)
 
@@ -320,13 +321,11 @@ class OCRHandle(object):
             SERIAL_PORT_LENGTH = 10
             SERIAL_PORT_TYPE = 0x0A
             SERIAL_END_OF_LINE = "\r\n"
-            serial_data = SERIAL_START_OF_LINE.encode("ASCII")
-            serial_data += (SERIAL_PORT_LENGTH).to_bytes(1, byteorder='little')
-            serial_data += (SERIAL_PORT_TYPE).to_bytes(1, byteorder='little')
-            serial_data += (self.status['number']).to_bytes(1, byteorder='little', signed=True)
-            serial_data += (self.status['x']).to_bytes(2, byteorder='little', signed=True)
-            serial_data += (self.status['y']).to_bytes(2, byteorder='little', signed=True)
-            serial_data += (self.status['angle']).to_bytes(4, byteorder='little', signed=True)
-            serial_data += SERIAL_END_OF_LINE.encode('ASCII')
-            self.serial_data = serial_data
+            self.serial_data = SERIAL_START_OF_LINE.encode("ASCII")
+            self.serial_data += struct.pack('B', SERIAL_PORT_LENGTH)
+            self.serial_data += struct.pack('B', SERIAL_PORT_TYPE)
+            self.serial_data += struct.pack('B', self.status['number'])
+            self.serial_data += struct.pack('h', self.status['x'])
+            self.serial_data += struct.pack('h', self.status['y'])
+            self.serial_data += SERIAL_END_OF_LINE.encode('ASCII')
         logging.info("Result: {}".format(self.status))
