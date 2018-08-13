@@ -24,7 +24,7 @@ class SocketHandler(websocket.WebSocketHandler):
         return True
 
     def open(self, video_id):
-        logging.info(f'Open camera `{video_id}`.')
+        logging.info('Open camera `{}`.'.format(video_id))
         self.camera = active_cameras[video_id]
 
     def on_message(self, message):
@@ -35,7 +35,7 @@ class SocketHandler(websocket.WebSocketHandler):
         except ValueError:
             index = 1
         if index % 100 == 0:
-            logging.info(f'Sending frame `{index}`.')
+            logging.info('Sending frame `{}`.'.format(index))
         update_dict = self.camera.detect_video()
         self.write_message(json.dumps(update_dict, ensure_ascii=False))
 

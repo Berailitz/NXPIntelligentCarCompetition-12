@@ -24,7 +24,7 @@ class OCRHandle(object):
         self.serial_data = b''
         for i in range(10):
             self.num_samples.append(cv2.imread(
-                os.path.join(DATASET_FOLDER, f"{i}.jpg"), cv2.IMREAD_GRAYSCALE))
+                os.path.join(DATASET_FOLDER, "{}.jpg".format(i)), cv2.IMREAD_GRAYSCALE))
 
     def recognize_number(self, img):
         STANDARD_SIZE = (30, 30)
@@ -284,8 +284,8 @@ class OCRHandle(object):
                         self.draw_box(self.videos['video-cut'], num_rect)
                     self.videos['video-num-l'] = num_imgs[0]
                     self.videos['video-num-r'] = num_imgs[1]
-                # cv2.imwrite(f"img_data//v5//{self.index}_l_{self.status['text'][:1]}.jpg", num_imgs[0])
-                # cv2.imwrite(f"img_data//v5//{self.index}_r_{self.status['text'][1:]}.jpg", num_imgs[1])
+                # cv2.imwrite("img_data//v5//{}_l_{}.jpg".format(self.index, self.status['text'][:1]), num_imgs[0])
+                # cv2.imwrite("img_data//v5//{}_r_{}.jpg".format(self.index, self.status['text'][1:]), num_imgs[1])
                 break
 
         if not is_text_found and sorted_rects:
@@ -298,7 +298,7 @@ class OCRHandle(object):
             num_img = self.cut_rectangle(main_area, rect_a, CUT_PADDING)
             num_list = [self.recognize_number(num_img)]
             self.status['confidence'] = num_list[0][1]
-            # cv2.imwrite(f"img_data//v5//{self.index}_c_{self.status['text']}.jpg", num_img)
+            # cv2.imwrite("img_data//v5//{}_c_{}.jpg".format(self.index, self.status['text']), num_img)
             if IS_WEB_VIDEO_ENABLED:
                 self.videos['video-num-l'] = num_img
 
@@ -329,4 +329,4 @@ class OCRHandle(object):
             serial_data += (self.status['angle']).to_bytes(4, byteorder='little', signed=True)
             serial_data += SERIAL_END_OF_LINE.encode('ASCII')
             self.serial_data = serial_data
-        logging.info(f"Result: {self.status}")
+        logging.info("Result: {}".format(self.status))

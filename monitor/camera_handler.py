@@ -53,7 +53,7 @@ class CameraUnit(object):
         return result
 
     def __del__(self):
-        logging.warning(f"Closing camera `{self.video_id}`.")
+        logging.warning("Closing camera `{}`.".format(self.video_id))
         self.camera.release()
         if IS_SERIAL_ENABLED:
             self.ser.close()

@@ -14,7 +14,7 @@ def create_app(log_path='log'):
     """create initialized flask app, compatible with uwsgi"""
     if not os.path.exists(log_path):
         os.mkdir(log_path)
-    set_logger(f'{log_path}/log_{get_current_time()}_{os.getpid()}.txt')
+    set_logger('{}/log_{}_{}.txt'.format(log_path, get_current_time(), os.getpid()))
     app = web.Application(
         [
             (r'/live/(?P<video_id>.+)', IndexHandler),

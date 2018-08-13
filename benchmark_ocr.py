@@ -13,7 +13,7 @@ cap = cv2.VideoCapture('video_1.mp4')
 res, frame = cap.read()
 if res:
     ocr = OCRHandle()
-    filename = os.path.join('test_result', f'OCRHandle.analyse_img_{get_current_time()}')
+    filename = os.path.join('test_result', 'OCRHandle.analyse_img_{}'.format(get_current_time()))
     cProfile.run('ocr.analyse_img(frame)', filename)
     p = pstats.Stats(filename)
     p.sort_stats('cumulative').print_stats(20)

@@ -19,7 +19,7 @@ while len(objpoints) < 20:
     ret, corners = cv.findChessboardCorners(gray, (8,6), None)
     # If found, add object points, image points (after refining them)
     if ret == True:
-        print(f"corners: {len(corners)}")
+        print("corners: {}".format(len(corners)))
         objpoints.append(objp)
         corners2 = cv.cornerSubPix(gray,corners, (11,11), (-1,-1), criteria)
         imgpoints.append(corners)
@@ -32,11 +32,11 @@ cv.destroyAllWindows()
 ret, mtx, dist, rvecs, tvecs = cv.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
 # retval, cameraMatrix, distCoeffs, rvecs, tvecs
 
-print(f"ret = {ret}")
-print(f"mtx = {mtx.tolist()}")
-print(f"dist = {dist.tolist()}")
-print(f"rvecs = {rvecs}")
-print(f"tvecs = {tvecs}")
+print("ret = {}".format(ret))
+print("mtx = {}".format(mtx.tolist()))
+print("dist = {}".format(dist.tolist()))
+print("rvecs = {}".format(rvecs))
+print("tvecs = {}".format(tvecs))
 
 
 # camera #2 (1920x1080):
