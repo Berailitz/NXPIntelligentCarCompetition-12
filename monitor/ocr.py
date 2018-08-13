@@ -53,13 +53,13 @@ class OCRHandle(object):
         """
         y = dot_list[0][1]
         if y < 810:
-            SHORTEST_BOARDER = 80 - (810 - dot_list[0][1]) * (20 / 810)
-            LONGEST_BOARDER = 400 - (810 - dot_list[0][1]) * (20 / 810)
-            MAX_RATIO = 2.8 + (810 - dot_list[0][1]) * (2.2 / 810)
+            SHORTEST_BOARDER = 200 - (810 - dot_list[0][1]) * (150 / 810)
+            LONGEST_BOARDER = 930 - (810 - dot_list[0][1]) * (300 / 810)
+            MAX_RATIO = 2 + (810 - dot_list[0][1]) * (3 / 810)
         else:
-            SHORTEST_BOARDER = 80
-            LONGEST_BOARDER = 400
-            MAX_RATIO = 2.8
+            SHORTEST_BOARDER = 200
+            LONGEST_BOARDER = 930
+            MAX_RATIO = 2
         result = False
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
@@ -126,14 +126,16 @@ class OCRHandle(object):
         flood_mask = np.zeros(
             (map_height + 2, map_width + 2), np.uint8)
 
-        cv2.line(img_bin, (1, map_height - LINE_WIDTH),
-                 (map_width - 1, map_height - LINE_WIDTH), 255, LINE_WIDTH)
-        cv2.line(img_bin, (1, LINE_WIDTH),
-                 (map_width - 1, LINE_WIDTH), 255, LINE_WIDTH)
-        cv2.line(img_bin, (1, round(0.5 * LINE_WIDTH)),
-                 (1, map_height - 1), 255, LINE_WIDTH)
-        cv2.line(img_bin, (map_width - 1, map_height - 1),
-                 (map_width - 1, map_height - 1), 255, LINE_WIDTH)
+        triangle_1 = np.array([(1, round(0.4 * map_height - 1)),
+                               (round(0.35 * map_width), 1), (1, 1)], dtype=np.int32)
+        triangle_2 = np.array([(map_width - 1, round(0.4 * map_height - 1)), (round(
+            0.65 * map_width), 1), (map_width - 1, 1)], dtype=np.int32)
+        cv2.fillConvexPoly(img_bin, triangle_1, 255)
+        cv2.fillConvexPoly(img_bin, triangle_2, 255)
+        cv2.line(img_bin, (1, map_height - LINE_WIDTH), (map_width - 1, map_height - LINE_WIDTH), 255, LINE_WIDTH)
+        cv2.line(img_bin, (1, LINE_WIDTH), (map_width - 1, LINE_WIDTH), 255, LINE_WIDTH)
+        cv2.line(img_bin, (1, round(0.5 * LINE_WIDTH)), (1, map_height - 1), 255, LINE_WIDTH)
+        cv2.line(img_bin, (map_width - 1, map_height - 1), (map_width - 1, map_height - 1), 255, LINE_WIDTH)
 
         if IS_WEB_VIDEO_ENABLED:
             self.videos['video-bin'] = img_bin.copy()
@@ -192,20 +194,7 @@ class OCRHandle(object):
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        wide_img = cv2.copyMakeBorder(
-            img_bin, 0, 0, 1000, 1000, cv2.BORDER_CONSTANT)
-        wide_width = wide_img.shape[1]
-        wide_height = wide_img.shape[0]
-        cur_window = np.float32(
-            [[1700, 0], [2200, 0], [wide_width, wide_height], [0, wide_height]])
-        canvas = np.float32(
-            [[0, 0], [wide_width, 0], [wide_width, wide_height], [0, wide_height]])
-        transformation_matrix = cv2.getPerspectiveTransform(cur_window, canvas)
-        raw_cut = cv2.warpPerspective(wide_img, transformation_matrix, (0, 0), flags=cv2.INTER_NEAREST)
-        main_cut = cv2.resize(raw_cut, (700, 1080), interpolation=cv2.INTER_LINEAR)
-        if IS_WEB_VIDEO_ENABLED:
-            self.videos['video-raw'] = gray.copy()
-        main_area = self.sweap_map(main_cut)
+        main_area = self.sweap_map(img_bin)
         return main_area
 
     @staticmethod
