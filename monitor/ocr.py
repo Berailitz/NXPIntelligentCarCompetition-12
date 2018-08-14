@@ -35,7 +35,7 @@ class OCRHandle(object):
             img, NETWORK_IMAGE_DIMENSIONS) for img in imgs]
         infer_probabilities = self.ncs.inference(resized_images)
         return [max(enumerate(
-            infer_probabilities), key=operator.itemgetter(1)) for infer_probabilitie in infer_probabilities]
+            infer_probabilitie), key=operator.itemgetter(1)) for infer_probabilitie in infer_probabilities]
 
     @staticmethod
     def is_rect_valid(dot_list: list) -> bool:
