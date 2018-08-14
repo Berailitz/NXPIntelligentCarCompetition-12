@@ -30,11 +30,12 @@ class OCRHandle(object):
             self.num_samples.append(cv2.imread(
                 os.path.join(DATASET_FOLDER, "{}.jpg".format(i)), cv2.IMREAD_GRAYSCALE))
 
-    def recognize_number(self, img):
-        resized_image = cv2.resize(img, NETWORK_IMAGE_DIMENSIONS)
-        infer_probabilities = self.ncs.inference(resized_image)
-        taget_number, confidence = max(enumerate(infer_probabilities), key=operator.itemgetter(1))
-        return taget_number, round(confidence, 3)
+    def recognize_number(self, imgs: list):
+        resized_images = [cv2.resize(
+            img, NETWORK_IMAGE_DIMENSIONS) for img in imgs]
+        infer_probabilities = self.ncs.inference(resized_images)
+        return [max(enumerate(
+            infer_probabilities), key=operator.itemgetter(1)) for infer_probabilitie in infer_probabilities]
 
     @staticmethod
     def is_rect_valid(dot_list: list) -> bool:
@@ -242,7 +243,7 @@ class OCRHandle(object):
                     [rect_a, rect_b], key=lambda num_rect: num_rect[0][0])
                 num_imgs = [self.cut_rectangle(
                     main_area, num_rect, CUT_PADDING) for num_rect in num_rects]
-                num_list = [self.recognize_number(num_img) for num_img in num_imgs]
+                num_list = self.recognize_number(num_imgs)
                 self.status['confidence'] = min(num_list[0][1], num_list[1][1])
 
                 if num_list[0][0] == 1:

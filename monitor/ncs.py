@@ -72,9 +72,12 @@ class NCSDevice(object):
             self.device.destroy()
             self.device = None
 
-    def inference(self, resized_image) -> (List[float]):
-        image_for_inference = resized_image.astype(numpy.float32)
-        image_for_inference[:] = ((image_for_inference[:]) * (1.0 / 255.0))
-        self.graph.load_tensor(image_for_inference.astype(numpy.float16))
-        output = self.graph.get_result()
+    def inference(self, resized_images: list) -> (List[float]):
+        for resized_image in resized_images:
+            image_for_inference = resized_image.astype(numpy.float32)
+            image_for_inference[:] = ((image_for_inference[:]) * (1.0 / 255.0))
+            self.graph.load_tensor(image_for_inference.astype(numpy.float16))
+        output = []
+        for i in range(len(resized_images)):
+            output.append([round(x, 3) for x in self.graph.get_result()])
         return output
