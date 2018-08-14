@@ -277,7 +277,7 @@ class OCRHandle(object):
                 cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
             text_center = self.get_center(rect_a)
             num_img = self.cut_rectangle(main_area, rect_a, CUT_PADDING)
-            num_list = [self.recognize_number(num_img)]
+            num_list = self.recognize_number([num_img])
             self.status['confidence'] = num_list[0][1]
             # cv2.imwrite("img_data//v5//{}_c_{}.jpg".format(self.index, self.status['text']), num_img)
             if IS_WEB_VIDEO_ENABLED:
