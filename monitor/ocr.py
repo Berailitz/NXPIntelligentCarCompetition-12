@@ -12,7 +12,8 @@ import numpy as np
 import pytesseract
 from skimage.measure import compare_ssim as ssim
 from .config import IS_WEB_VIDEO_ENABLED
-from .credentials import DATASET_FOLDER
+from .credentials import DATASET_FOLDER, NETWORK_IMAGE_DIMENSIONS
+from .ncs import NCSDevice
 
 
 class OCRHandle(object):
@@ -23,27 +24,16 @@ class OCRHandle(object):
         self.status = {}
         self.num_samples = []
         self.serial_data = b''
+        self.ncs = NCSDevice(0)
+        self.ncs.open()
         for i in range(10):
             self.num_samples.append(cv2.imread(
                 os.path.join(DATASET_FOLDER, "{}.jpg".format(i)), cv2.IMREAD_GRAYSCALE))
 
     def recognize_number(self, img):
-        STANDARD_SIZE = (30, 30)
-        THRESHHOLD_CONFIDENCE = 0.45
-        PYTESSERACT_CONFIDENCE = 0.8
-        similarities = []
-        for i, sample_img in enumerate(self.num_samples):
-            target_standard = cv2.resize(img, STANDARD_SIZE, interpolation=cv2.INTER_LINEAR)
-            similarities.append(ssim(target_standard, sample_img))
-            taget_number, confidence = max(enumerate(similarities), key=operator.itemgetter(1))
-        if confidence < THRESHHOLD_CONFIDENCE:
-            taget_number = pytesseract.image_to_string(
-                target_standard, config='-c tessedit_char_whitelist=0123456789 -psm 10')
-            try:
-                taget_number = int(taget_number)
-            except ValueError:
-                taget_number = 0
-            confidence = PYTESSERACT_CONFIDENCE
+        resized_image = cv2.resize(img, NETWORK_IMAGE_DIMENSIONS)
+        infer_probabilities = self.ncs.inference(resized_image)
+        taget_number, confidence = max(enumerate(infer_probabilities), key=operator.itemgetter(1))
         return taget_number, round(confidence, 3)
 
     @staticmethod
