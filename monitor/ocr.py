@@ -187,8 +187,8 @@ class OCRHandle(object):
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        src = np.float32([[79, 159], [13, 388], [386, 139], [638, 213]])
-        dst = np.float32([[13, 113], [13, 388], [386, 113], [386, 388]])
+        src = np.float32([[237, 376], [39, 873], [1158, 312], [1914, 479]])
+        dst = np.float32([[39, 254], [39, 873], [1158, 254], [1158, 873]])
         H = cv2.getPerspectiveTransform(src, dst)
         perspective_result = cv2.warpPerspective(img_bin, H, (0, 0))
         main_area = self.sweap_map(perspective_result)
