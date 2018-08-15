@@ -56,6 +56,7 @@
 #### 训练
 1. 运行`capture_video.py`录制视频
 1. 运行`run.py`提取图片，并简单标记之
+1. 运行`build_mnist.py`制作数据集
 1. 运行`train_network.py`训练网络
 1. 运行`compile.sh`编译`graph`文件
 
