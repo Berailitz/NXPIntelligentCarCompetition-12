@@ -11,8 +11,9 @@ import cv2
 import numpy as np
 import pytesseract
 from skimage.measure import compare_ssim as ssim
-from .config import IS_WEB_VIDEO_ENABLED
-from .credentials import DATASET_FOLDER, NETWORK_IMAGE_DIMENSIONS
+from .config import IMAGE_SAMPLE_FOLDER, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES
+from .credentials import NETWORK_IMAGE_DIMENSIONS
+from .mess import get_current_time
 from .ncs import NCSDevice
 
 
@@ -22,20 +23,21 @@ class OCRHandle(object):
         self.cut = None
         self.index = 0
         self.status = {}
-        self.num_samples = []
         self.serial_data = b''
         self.ncs = NCSDevice(0)
         self.ncs.open()
-        for i in range(10):
-            self.num_samples.append(cv2.imread(
-                os.path.join(DATASET_FOLDER, "{}.jpg".format(i)), cv2.IMREAD_GRAYSCALE))
 
     def recognize_number(self, imgs: list):
         resized_images = [cv2.resize(
             img, NETWORK_IMAGE_DIMENSIONS) for img in imgs]
         infer_probabilities = self.ncs.inference(resized_images)
-        return [max(enumerate(
+        result = [max(enumerate(
             infer_probabilitie), key=operator.itemgetter(1)) for infer_probabilitie in infer_probabilities]
+        if DO_SAVE_IMAGE_SAMPLES:
+            for i, resized_image in enumerate(resized_images):
+                cv2.imwrite(os.path.join(IMAGE_SAMPLE_FOLDER, "{}_{}.jpg".format(
+                    get_current_time(), result[i][0])), resized_image)
+        return result
 
     @staticmethod
     def is_rect_valid(dot_list: list) -> bool:

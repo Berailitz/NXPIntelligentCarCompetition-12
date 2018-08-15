@@ -3,9 +3,8 @@ import datetime
 import functools
 import logging
 import logging.handlers
-import time
 
-get_current_time = lambda: time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
+get_current_time = lambda: datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')
 
 def fun_logger(text='Fun_logger'):
     """log function call and result with custom text head"""
@@ -29,3 +28,10 @@ def set_logger(log_path):
     file_handler.setFormatter(logging.Formatter('[%(levelname)s] %(asctime)s %(filename)s:%(lineno)d %(message)s'))
     logging.getLogger(None).addHandler(file_handler)
     logging.info("Start ....")
+
+def try_int(int_in_text: str, default=None):
+    try:
+        result = int(int_in_text)
+    except (ValueError, TypeError):
+        result = default
+    return result

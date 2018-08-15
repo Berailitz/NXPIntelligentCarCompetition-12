@@ -53,6 +53,12 @@
 1. 安装 requirements.txt 中的其他库
 1. 安装 tesseract
 
+#### 训练
+1. 运行`capture_video.py`录制视频
+1. 运行`run.py`提取图片，并简单标记之
+1. 运行`train_network.py`训练网络
+1. 运行`compile.sh`编译`graph`文件
+
 #### 运行
 1. 建立 `config.py`, `credentials.py`
 1. 运行 `run.py`
