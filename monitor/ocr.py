@@ -119,10 +119,10 @@ class OCRHandle(object):
         flood_mask = np.zeros(
             (map_height + 2, map_width + 2), np.uint8)
 
-        triangle_1 = np.array([(1, round(0.4 * map_height - 1)),
-                               (round(0.35 * map_width), 1), (1, 1)], dtype=np.int32)
-        triangle_2 = np.array([(map_width - 1, round(0.4 * map_height - 1)), (round(
-            0.65 * map_width), 1), (map_width - 1, 1)], dtype=np.int32)
+        triangle_1 = np.array([(round(0.35 * map_width), 0),
+                               (map_width - 1, map_height - 1), (map_width - 1, 0)], dtype=np.int32)
+        triangle_2 = np.array(
+            [(round(0.4 * map_width), 0), (0, round(0.35 * map_height)), (0, 0)], dtype=np.int32)
         cv2.fillConvexPoly(img_bin, triangle_1, 255)
         cv2.fillConvexPoly(img_bin, triangle_2, 255)
         cv2.line(img_bin, (1, map_height - LINE_WIDTH), (map_width - 1, map_height - LINE_WIDTH), 255, LINE_WIDTH)
@@ -187,7 +187,11 @@ class OCRHandle(object):
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        main_area = self.sweap_map(img_bin)
+        src = np.float32([[79, 159], [13, 388], [386, 139], [638, 213]])
+        dst = np.float32([[13, 113], [13, 388], [386, 113], [386, 388]])
+        H = cv2.getPerspectiveTransform(src, dst)
+        perspective_result = cv2.warpPerspective(img_bin, H, (0, 0))
+        main_area = self.sweap_map(perspective_result)
         return main_area
 
     @staticmethod
