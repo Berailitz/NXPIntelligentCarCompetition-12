@@ -123,8 +123,14 @@ class OCRHandle(object):
                                (map_width - 1, map_height - 1), (map_width - 1, 0)], dtype=np.int32)
         triangle_2 = np.array(
             [(round(0.4 * map_width), 0), (0, round(0.35 * map_height)), (0, 0)], dtype=np.int32)
+        triangle_3 = np.array(
+            [(0, 900), (0, map_height - 1), (500, map_height - 1)], dtype=np.int32)
+        triangle_4 = np.array(
+            [(map_width - 1, 600), (0, map_height - 1), (map_width - 1, map_height - 1)], dtype=np.int32)
         cv2.fillConvexPoly(img_bin, triangle_1, 255)
         cv2.fillConvexPoly(img_bin, triangle_2, 255)
+        cv2.fillConvexPoly(img_bin, triangle_3, 255)
+        cv2.fillConvexPoly(img_bin, triangle_4, 255)
         cv2.line(img_bin, (1, map_height - LINE_WIDTH), (map_width - 1, map_height - LINE_WIDTH), 255, LINE_WIDTH)
         cv2.line(img_bin, (1, LINE_WIDTH), (map_width - 1, LINE_WIDTH), 255, LINE_WIDTH)
         cv2.line(img_bin, (1, round(0.5 * LINE_WIDTH)), (1, map_height - 1), 255, LINE_WIDTH)
