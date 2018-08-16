@@ -35,10 +35,12 @@ class OCRHandle(object):
 
     def initialize(self):
         if OCR_DO_USE_NCS:
+            logging.info('Initialize OCRHandle WITH NCS.')
             self.ncs = NCSDevice(0)
             self.ncs.open()
             self.ncs.load_graph(NETWORK_GRAPH_FILENAME)
         else:
+            logging.info('Initialize OCRHandle WITHOUT NCS.')
             for i in range(10):
                 self.num_samples.append(cv2.imread(
                     os.path.join(DATASET_STANDARD_FOLDER, "{}.jpg".format(i)), cv2.IMREAD_GRAYSCALE))

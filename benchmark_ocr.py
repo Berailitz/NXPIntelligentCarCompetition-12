@@ -16,6 +16,7 @@ if res:
     ocr.initialize()
     filename = os.path.join('test_result', 'OCRHandle.analyse_img_{}'.format(get_current_time()))
     cProfile.run('ocr.analyse_img(frame)', filename)
+    ocr.close()
     p = pstats.Stats(filename)
     p.sort_stats('cumulative').print_stats(20)
 else:
