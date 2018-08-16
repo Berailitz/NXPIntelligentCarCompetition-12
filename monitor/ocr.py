@@ -27,6 +27,9 @@ class OCRHandle(object):
         self.ncs.open()
         self.ncs.load_graph(NETWORK_GRAPH_FILENAME)
 
+    def close(self):
+        self.ncs.close()
+
     def recognize_number(self, imgs: list):
         resized_images = [cv2.resize(
             img, NETWORK_IMAGE_DIMENSIONS) for img in imgs]

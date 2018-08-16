@@ -64,6 +64,8 @@ class CameraUnit(object):
     def close(self):
         logging.warning("Closing camera `{}`.".format(self.video_id))
         self.camera.release()
+        logging.warning("Closing NCS device.")
+        self.ocr_handle.close()
         if IS_SERIAL_ENABLED:
             logging.warning("Closing serial port `{}`.".format(SERIAL_PORT))
             self.ser.close()
