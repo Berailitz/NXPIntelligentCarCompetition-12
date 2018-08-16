@@ -14,17 +14,18 @@ class IndexHandler(web.RequestHandler):
 
 class SocketHandler(websocket.WebSocketHandler):
     """ Handler for websocket queries. """
-
     def __init__(self, application, request):
         """ Initialize the Redis store and framerate monitor. """
         super().__init__(application, request)
         self.camera = None
+        self.video_id = None
 
     def check_origin(self, origin):
         return True
 
     def open(self, video_id):
         logging.info('Open camera `{}`.'.format(video_id))
+        self.video_id = video_id
         self.camera = active_cameras[video_id]
 
     def on_message(self, message):
@@ -40,4 +41,5 @@ class SocketHandler(websocket.WebSocketHandler):
         self.write_message(json.dumps(update_dict, ensure_ascii=False))
 
     def on_close(self):
-        pass
+        logging.warning("WebSocket `{}` closed.".format(self.video_id))
+        self.camera.close()
