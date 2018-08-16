@@ -165,7 +165,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--database-folder', type=str, default=MNIST_DATABASE_FOLDER,
                         help='Folder to store MNIST database')
-    parser.add_argument('--model-folder', type=str, default=MNIST_DATABASE_FOLDER,
+    parser.add_argument('--model-folder', type=str, default=MNIST_MODEL_FOLDER,
                         help='Path to store trained model')
     flags, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
