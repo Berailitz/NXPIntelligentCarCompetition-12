@@ -18,13 +18,18 @@ class CameraUnit(object):
         self.open_camera()
         self.ocr_handle = OCRHandle()
         self.frame_index = 0
+        self.is_opened = False
         if IS_SERIAL_ENABLED:
+            logging.warning("Open serial port `{}` at baudrate `{}`.".format(SERIAL_PORT, SERIAL_BAUDRATE))
             self.ser = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE)
 
     def open_camera(self):
         self.camera = cv2.VideoCapture(self.video_id)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        self.is_opened = self.camera and self.camera.isOpened()
+        if not self.is_opened:
+            raise SystemError("Cannot open camera `{}`.".format(self.video_id))
 
     def detect_video(self):
         self.frame_index += 1
@@ -53,9 +58,14 @@ class CameraUnit(object):
         return result
 
     def __del__(self):
+        if self.is_opened:
+            self.close()
+
+    def close(self):
         logging.warning("Closing camera `{}`.".format(self.video_id))
         self.camera.release()
         if IS_SERIAL_ENABLED:
+            logging.warning("Closing serial port `{}`.".format(SERIAL_PORT))
             self.ser.close()
 
 
