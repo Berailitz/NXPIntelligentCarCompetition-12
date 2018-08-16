@@ -51,14 +51,9 @@ class OCRHandle(object):
         ***WARNING: ASSUME THE CAMERA HEIGHT IS 1080.***
         """
         y = dot_list[0][1]
-        if y < 810:
-            SHORTEST_BOARDER = 200 - (810 - dot_list[0][1]) * (150 / 810)
-            LONGEST_BOARDER = 930 - (810 - dot_list[0][1]) * (300 / 810)
-            MAX_RATIO = 2 + (810 - dot_list[0][1]) * (3 / 810)
-        else:
-            SHORTEST_BOARDER = 200
-            LONGEST_BOARDER = 930
-            MAX_RATIO = 2
+        SHORTEST_BOARDER = 100
+        LONGEST_BOARDER = 800
+        MAX_RATIO = 4
         result = False
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
@@ -125,18 +120,23 @@ class OCRHandle(object):
         flood_mask = np.zeros(
             (map_height + 2, map_width + 2), np.uint8)
 
-        triangle_1 = np.array([(round(0.35 * map_width), 0),
-                               (map_width - 1, map_height - 1), (map_width - 1, 0)], dtype=np.int32)
-        triangle_2 = np.array(
-            [(round(0.4 * map_width), 0), (0, round(0.35 * map_height)), (0, 0)], dtype=np.int32)
-        triangle_3 = np.array(
-            [(0, 900), (0, map_height - 1), (500, map_height - 1)], dtype=np.int32)
-        triangle_4 = np.array(
-            [(map_width - 1, 600), (0, map_height - 1), (map_width - 1, map_height - 1)], dtype=np.int32)
-        cv2.fillConvexPoly(img_bin, triangle_1, 255)
-        cv2.fillConvexPoly(img_bin, triangle_2, 255)
+        triangle_3 = np.array([(0, round(0.82 * map_height)),
+                            (0, map_height - 1),
+                            (round(0.27 * map_width), map_height - 1)], dtype=np.int32)  # buttom-left-1
+        triangle_4 = np.array([(0, round(0.55 * map_height)),
+                            (0, map_height - 1),
+                            (round(0.08 * map_width), map_height - 1)], dtype=np.int32)  # buttom-left-2
+        triangle_5 = np.array([(round(0.2 * map_width), map_height - 1),
+                            (map_width - 1, round(0.47 * map_height)),
+                            (map_width - 1, map_height - 1)], dtype=np.int32)  # buttom-right
+        left_rect = np.array([(round(0.6 * map_width), map_height - 1),
+                            (round(0.6 * map_width), 0),
+                            (map_width - 1, 0),
+                            (map_width - 1, map_height - 1)], dtype=np.int32)
         cv2.fillConvexPoly(img_bin, triangle_3, 255)
         cv2.fillConvexPoly(img_bin, triangle_4, 255)
+        cv2.fillConvexPoly(img_bin, triangle_5, 255)
+        cv2.fillConvexPoly(img_bin, left_rect, 255)
         cv2.line(img_bin, (1, map_height - LINE_WIDTH), (map_width - 1, map_height - LINE_WIDTH), 255, LINE_WIDTH)
         cv2.line(img_bin, (1, LINE_WIDTH), (map_width - 1, LINE_WIDTH), 255, LINE_WIDTH)
         cv2.line(img_bin, (1, round(0.5 * LINE_WIDTH)), (1, map_height - 1), 255, LINE_WIDTH)
@@ -197,7 +197,7 @@ class OCRHandle(object):
     def pre_process_img(self, raw_img):
         if IS_WEB_VIDEO_ENABLED:
             self.videos['video-raw'] = raw_img.copy()
-        THRESHHOLD_GRAY_MAIN = 180
+        THRESHHOLD_GRAY_MAIN = 165
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
@@ -244,8 +244,10 @@ class OCRHandle(object):
         main_area = self.pre_process_img(raw_img)
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
-        MAIN_CENTER = (round(main_width * 0.5), 796)
-        ANGLE_BASE = (MAIN_CENTER[0], main_height - 1)
+        STANDARD_X = round(main_width * 0.295)
+        STANDARD_Y = round(main_height * 0.52)
+        MAIN_CENTER = (STANDARD_X, STANDARD_Y)
+        ANGLE_BASE = (STANDARD_X, main_height - 1)
         if IS_WEB_VIDEO_ENABLED:
             self.videos['video-cut'] = main_area.copy()
 
