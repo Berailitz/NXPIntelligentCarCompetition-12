@@ -32,7 +32,6 @@ class NCSDevice(object):
         self.index = index
         self.device = None
         self.graph = None
-        self.is_device_opened = False
 
     def __del__(self):
         self.close()
@@ -67,10 +66,9 @@ class NCSDevice(object):
         if self.graph is not None:
             self.graph.deallocate()
             self.graph = None
-        if self.is_device_opened:
+        if self.device is not None:
             logging.warning("Closing NCS device {}.".format(self.index))
             self.device.close()
-        if self.device is not None:
             self.device.destroy()
             self.device = None
 

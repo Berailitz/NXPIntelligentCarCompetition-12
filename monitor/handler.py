@@ -27,6 +27,7 @@ class SocketHandler(websocket.WebSocketHandler):
         logging.info('Open camera `{}`.'.format(video_id))
         self.video_id = video_id
         self.camera = active_cameras[video_id]
+        self.camera.open()
 
     def on_message(self, message):
         """ Retrieve image ID from database until different from last ID,

@@ -15,20 +15,20 @@ class CameraUnit(object):
         except ValueError:
             self.video_id = video_id
         self.camera = None
-        self.open_camera()
-        self.ocr_handle = OCRHandle()
+        self.ocr_handle = None
         self.frame_index = 0
-        self.is_opened = False
-        if IS_SERIAL_ENABLED:
-            logging.warning("Open serial port `{}` at baudrate `{}`.".format(SERIAL_PORT, SERIAL_BAUDRATE))
-            self.ser = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE)
+        self.ser = None
 
-    def open_camera(self):
+    def open(self):
         self.camera = cv2.VideoCapture(self.video_id)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-        self.is_opened = self.camera and self.camera.isOpened()
-        if not self.is_opened:
+        self.ocr_handle = OCRHandle()
+        self.ocr_handle.initialize()
+        if IS_SERIAL_ENABLED:
+            logging.warning("Open serial port `{}` at baudrate `{}`.".format(SERIAL_PORT, SERIAL_BAUDRATE))
+            self.ser = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE)
+        if not self.camera.isOpened():
             raise SystemError("Cannot open camera `{}`.".format(self.video_id))
 
     def detect_video(self):
@@ -52,24 +52,31 @@ class CameraUnit(object):
                     pass
             else:
                 logging.warning("No frame read.")
-                self.open_camera()
+                self.open()
         except Exception as e:
             logging.exception(e)
         return result
 
     def __del__(self):
-        if self.is_opened:
-            self.close()
+        if self.camera is not None:
+            self.camera.release()
+        if self.ser is not None:
+            self.ser.close()
+        if self.ocr_handle is not None:
+            self.ocr_handle.close()
 
     def close(self):
         logging.warning("Closing camera `{}`.".format(self.video_id))
         self.camera.release()
+        self.camera = None
         if OCR_DO_USE_NCS:
             logging.warning("Closing NCS device.")
             self.ocr_handle.close()
+            self.ocr_handle = None
         if IS_SERIAL_ENABLED:
             logging.warning("Closing serial port `{}`.".format(SERIAL_PORT))
             self.ser.close()
+            self.ser = None
 
 
 class CameraHandler(defaultdict):

@@ -29,11 +29,16 @@ class OCRHandle(object):
         self.status = {}
         self.serial_data = b''
         if OCR_DO_USE_NCS:
+            self.ncs = None
+        else:
+            self.num_samples = []
+
+    def initialize(self):
+        if OCR_DO_USE_NCS:
             self.ncs = NCSDevice(0)
             self.ncs.open()
             self.ncs.load_graph(NETWORK_GRAPH_FILENAME)
         else:
-            self.num_samples = []
             for i in range(10):
                 self.num_samples.append(cv2.imread(
                     os.path.join(DATASET_STANDARD_FOLDER, "{}.jpg".format(i)), cv2.IMREAD_GRAYSCALE))
