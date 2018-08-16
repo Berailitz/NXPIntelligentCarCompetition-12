@@ -45,20 +45,14 @@ class NCSDevice(object):
         self.close()
 
     def open(self) -> None:
-        """Creates and opens the Neural Compute device and c
-            reates a graph that can execute inferences on it.
-
-            Returns
-            -------
-            graph : mvnc.Graph
-                The allocated graph to use for inferences.  Will be None if couldn't allocate graph
-            """
+        logging.info("Opening device `{}`.".format(self.index))
         devices = mvncapi2.enumerate_devices()
         self.device = mvncapi2.Device(devices[self.index])
         self.device.open()
         self.is_device_opened = True
     
     def load_graph(self, graph_filename: str):
+        logging.info("Load graph from `{}`.".format(graph_filename))
         with open(graph_filename, mode='rb') as graph_f:
             in_memory_graph = graph_f.read()
             api2_graph = mvncapi2.Graph(os.path.basename(graph_filename))

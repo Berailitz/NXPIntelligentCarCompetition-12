@@ -2,12 +2,15 @@
 #! /usr/bin/env python3
 
 import argparse
+import logging
 import os
 from monitor.config import LOG_PATH, MNIST_INFERENCE_PATH_PREFIX, NETWORK_GRAPH_FILENAME
 from monitor.mess import get_current_time, set_logger
 
 def compile_graph(model_prefix: str, graph_path: str):
-    os.system("mvNCCompile {}.meta -s 12 -in input -on output -o {}".format(model_prefix, graph_path))
+    command = "mvNCCompile {}.meta -s 12 -in input -on output -o {}".format(model_prefix, graph_path)
+    logging.info("Process compilation `{}`".format(command))
+    os.system(command)
 
 def main():
     set_logger('{}/log_build_mnist_{}.txt'.format(LOG_PATH, get_current_time()))
