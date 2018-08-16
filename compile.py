@@ -3,7 +3,7 @@
 
 import argparse
 import os
-from monitor.config import LOG_PATH, MNIST_MODEL_PATH_PREFIX, NETWORK_GRAPH_FILENAME
+from monitor.config import LOG_PATH, MNIST_INFERENCE_PATH_PREFIX, NETWORK_GRAPH_FILENAME
 from monitor.mess import get_current_time, set_logger
 
 def compile_graph(model_prefix: str, graph_path: str):
@@ -14,7 +14,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--graph-path', type=str, default=NETWORK_GRAPH_FILENAME,
                         help='Path to graph file')
-    parser.add_argument('--model-prefix', type=str, default=MNIST_MODEL_PATH_PREFIX,
+    parser.add_argument('--model-prefix', type=str, default=MNIST_INFERENCE_PATH_PREFIX,
                         help='Path prefix to trained model')
     flags, _unparsed = parser.parse_known_args()
     compile_graph(**flags.__dict__)
