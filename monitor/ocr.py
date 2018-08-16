@@ -11,11 +11,10 @@ import cv2
 import numpy as np
 import pytesseract
 from skimage.measure import compare_ssim as ssim
-from .config import IMAGE_SAMPLE_FOLDER, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES
+from .config import IMAGE_SAMPLE_FOLDER, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES, NETWORK_GRAPH_FILENAME
 from .credentials import NETWORK_IMAGE_DIMENSIONS
 from .mess import get_current_time
 from .ncs import NCSDevice
-
 
 class OCRHandle(object):
     def __init__(self):
@@ -26,6 +25,7 @@ class OCRHandle(object):
         self.serial_data = b''
         self.ncs = NCSDevice(0)
         self.ncs.open()
+        self.ncs.load_graph(NETWORK_GRAPH_FILENAME)
 
     def recognize_number(self, imgs: list):
         resized_images = [cv2.resize(

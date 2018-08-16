@@ -5,7 +5,6 @@ import time
 import logging
 from mvnc import mvncapi as mvncapi2
 from typing import List
-from .credentials import NETWORK_GRAPH_FILENAME
 
 
 class NCSGraph:
@@ -38,6 +37,13 @@ class NCSDevice(object):
     def __del__(self):
         self.close()
 
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
     def open(self) -> None:
         """Creates and opens the Neural Compute device and c
             reates a graph that can execute inferences on it.
@@ -51,15 +57,17 @@ class NCSDevice(object):
         self.device = mvncapi2.Device(devices[self.index])
         self.device.open()
         self.is_device_opened = True
-        with open(NETWORK_GRAPH_FILENAME, mode='rb') as graph_f:
+    
+    def load_graph(self, graph_filename: str):
+        with open(graph_filename, mode='rb') as graph_f:
             in_memory_graph = graph_f.read()
-            api2_graph = mvncapi2.Graph("mnist ocr graph")
+            api2_graph = mvncapi2.Graph(os.path.basename(graph_filename))
             api2_fifo_in, api2_fifo_out = api2_graph.allocate_with_fifos(self.device, in_memory_graph,
                                                                          input_fifo_data_type=mvncapi2.FifoDataType.FP16,
                                                                          output_fifo_data_type=mvncapi2.FifoDataType.FP16)
             self.graph = NCSGraph(api2_graph, api2_fifo_in, api2_fifo_out)
         if self.graph is None:
-            raise SystemError("Cannot open NCS device {} with graph {}.".format(self.index, NETWORK_GRAPH_FILENAME))
+            raise SystemError("Cannot open NCS device {} with graph {}.".format(self.index, graph_filename))
 
     def close(self):
         if self.graph is not None:
