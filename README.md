@@ -58,7 +58,8 @@
 1. 运行`run.py`提取图片，并简单标记之
 1. 运行`build_mnist.py`制作数据集
 1. 运行`train_network.py`训练网络
-1. 运行`compile.sh`编译`graph`文件
+1. 运行`compile.py`编译`graph`文件
+1. 运行`test_ncs.py`测试网络
 
 #### 运行
 1. 建立 `config.py`, `credentials.py`

@@ -3,7 +3,7 @@ import base64
 import logging
 import cv2
 import serial
-from .config import IS_SERIAL_ENABLED, IS_WEB_VIDEO_ENABLED
+from .config import IS_SERIAL_ENABLED, IS_WEB_VIDEO_ENABLED, OCR_DO_USE_NCS
 from .credentials import SERIAL_BAUDRATE, SERIAL_PORT
 from .ocr import OCRHandle
 
@@ -64,6 +64,9 @@ class CameraUnit(object):
     def close(self):
         logging.warning("Closing camera `{}`.".format(self.video_id))
         self.camera.release()
+        if OCR_DO_USE_NCS:
+            logging.warning("Closing NCS device.")
+            self.ocr_handle.close()
         if IS_SERIAL_ENABLED:
             logging.warning("Closing serial port `{}`.".format(SERIAL_PORT))
             self.ser.close()

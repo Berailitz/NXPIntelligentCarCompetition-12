@@ -10,8 +10,13 @@ import struct
 import cv2
 import numpy as np
 import pytesseract
-from skimage.measure import compare_ssim as ssim
-from .config import IMAGE_SAMPLE_FOLDER, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES, DATASET_STANDARD_FOLDER
+from .config import IMAGE_SAMPLE_FOLDER, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES, OCR_DO_USE_NCS
+if OCR_DO_USE_NCS:
+    from .config import NETWORK_GRAPH_FILENAME
+    from .ncs import NCSDevice
+else:
+    from .config import DATASET_STANDARD_FOLDER
+    from skimage.measure import compare_ssim as ssim
 from .credentials import NETWORK_IMAGE_DIMENSIONS
 from .mess import get_current_time
 
@@ -22,21 +27,33 @@ class OCRHandle(object):
         self.cut = None
         self.index = 0
         self.status = {}
-        self.num_samples = []
         self.serial_data = b''
-        for i in range(10):
-            self.num_samples.append(cv2.imread(
-                os.path.join(DATASET_STANDARD_FOLDER, "{}.jpg".format(i)), cv2.IMREAD_GRAYSCALE))
+        if OCR_DO_USE_NCS:
+            self.ncs = NCSDevice(0)
+            self.ncs.open()
+            self.ncs.load_graph(NETWORK_GRAPH_FILENAME)
+        else:
+            self.num_samples = []
+            for i in range(10):
+                self.num_samples.append(cv2.imread(
+                    os.path.join(DATASET_STANDARD_FOLDER, "{}.jpg".format(i)), cv2.IMREAD_GRAYSCALE))
+
+    def close(self):
+        if OCR_DO_USE_NCS:
+            self.ncs.close()
 
     def recognize_number(self, imgs: list):
         resized_images = [cv2.resize(
             img, NETWORK_IMAGE_DIMENSIONS, cv2.INTER_LINEAR) for img in imgs]
-        infer_probabilities = []
-        for resized_image in resized_images:
-            similarities = []
-            for i, sample_img in enumerate(self.num_samples):
-                similarities.append(ssim(sample_img, resized_image))
-            infer_probabilities.append(similarities)
+        if OCR_DO_USE_NCS:
+            infer_probabilities = self.ncs.inference(resized_images)
+        else:
+            infer_probabilities = []
+            for resized_image in resized_images:
+                similarities = []
+                for i, sample_img in enumerate(self.num_samples):
+                    similarities.append(ssim(sample_img, resized_image))
+                infer_probabilities.append(similarities)
         result = [max(enumerate(
             infer_probabilitie), key=operator.itemgetter(1)) for infer_probabilitie in infer_probabilities]
         if DO_SAVE_IMAGE_SAMPLES:
