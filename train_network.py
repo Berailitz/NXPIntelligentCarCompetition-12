@@ -9,7 +9,7 @@ import sys
 import tempfile
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
-from monitor.config import LOG_PATH, MNIST_DATABASE_FOLDER, MNIST_MODEL_FOLDER
+from monitor.config import LOG_PATH, MNIST_DATABASE_FOLDER, MNIST_MODEL_PATH_PREFIX
 from monitor.mess import get_current_time, set_logger
 
 
@@ -156,8 +156,7 @@ def main(_):
             x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
 
         # NPS added two lines
-        saver.save(sess, os.path.join(
-            MNIST_MODEL_FOLDER, 'mnist_model'))
+        saver.save(sess, flags.model_prefix)
 
 
 if __name__ == '__main__':
@@ -165,7 +164,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--database-folder', type=str, default=MNIST_DATABASE_FOLDER,
                         help='Folder to store MNIST database')
-    parser.add_argument('--model-folder', type=str, default=MNIST_MODEL_FOLDER,
-                        help='Path to store trained model')
+    parser.add_argument('--model-prefix', type=str, default=MNIST_MODEL_PATH_PREFIX,
+                        help='Path prefix to trained model')
     flags, unparsed = parser.parse_known_args()
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
