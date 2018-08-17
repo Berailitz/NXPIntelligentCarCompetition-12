@@ -5,11 +5,12 @@ import cProfile
 import os
 import pstats
 import cv2
+from monitor.config import STANDARD_VIDEO_PATH
 from monitor.mess import get_current_time
 from monitor.ocr import OCRHandle
 
 
-cap = cv2.VideoCapture('video_1.mp4')
+cap = cv2.VideoCapture(STANDARD_VIDEO_PATH)
 res, frame = cap.read()
 if res:
     ocr = OCRHandle()

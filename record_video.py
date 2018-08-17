@@ -17,20 +17,25 @@ def save_video(camera_id_in_str: str) -> None:
     camera.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    video_writer = cv2.VideoWriter(os.path.join(VIDEO_CAPTURE_FOLDER, 'capture_{}.avi'.format(
-        get_current_time())), fourcc, 20.0, (CAMERA_WIDTH, CAMERA_HEIGHT), False)
+    path_to_video_file = os.path.join(
+        VIDEO_CAPTURE_FOLDER, 'capture_{}.avi'.format(get_current_time()))
+    video_writer = cv2.VideoWriter(
+        path_to_video_file, fourcc, 20.0, (CAMERA_WIDTH, CAMERA_HEIGHT), False)
     if camera.isOpened():
         logging.info("Camera `{}` opened.".format(camera_id))
+        frame_index = 0
     try:
         while camera.isOpened():
             ret, frame = camera.read()
             if ret is True:
                 gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 video_writer.write(gray_frame)
+                frame_index += 1
             else:
                 break
     except:
-        logging.warning("Stop capturing video from camera `{}`".format(camera_id))
+        logging.warning("Stop capturing video `{}` from camera `{}` with `{}` frames saved.".format(
+            path_to_video_file, camera_id, frame_index))
         camera.release()
         video_writer.release()
 

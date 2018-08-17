@@ -72,11 +72,11 @@ class OCRHandle(object):
     @staticmethod
     def is_rect_valid(dot_list: list) -> bool:
         """ dot_list: sorted [(x, y)]
-        ***WARNING: ASSUME THE CAMERA HEIGHT IS 1080.***
+        ***WARNING: ASSUME THE CAMERA HEIGHT IS 640x480.***
         """
         y = dot_list[0][1]
-        SHORTEST_BOARDER = 100
-        LONGEST_BOARDER = 800
+        SHORTEST_BOARDER = 35
+        LONGEST_BOARDER = 350
         MAX_RATIO = 4
         result = False
         x_list = [dot[0] for dot in dot_list]
@@ -218,6 +218,21 @@ class OCRHandle(object):
         x_max, y_max = rect_with_padding[2]
         return img[y_min:y_max, x_min:x_max]
 
+    def get_H(self, src_list):
+        left_up = src_list[0]
+        left_down = src_list[1]
+        right_up = src_list[2]
+        right_down = src_list[3]
+
+        dst = list()
+
+        dst.append([left_up[0], right_up[1]])
+        dst.append([left_up[0], left_down[1]])
+        dst.append([right_up[0], right_up[1]])
+        dst.append([right_up[0], left_down[1]])
+        dst = np.array(dst)
+        return cv2.getPerspectiveTransform(src_list, dst)
+
     def pre_process_img(self, raw_img):
         if IS_WEB_VIDEO_ENABLED:
             self.videos['video-raw'] = raw_img.copy()
@@ -225,9 +240,8 @@ class OCRHandle(object):
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        src = np.float32([[237, 376], [39, 873], [1158, 312], [1914, 479]])
-        dst = np.float32([[39, 254], [39, 873], [1158, 254], [1158, 873]])
-        H = cv2.getPerspectiveTransform(src, dst)
+        src = np.float32([[1, 141], [172, 385], [281, 95], [611, 146]])
+        H = self.get_H(src)
         perspective_result = cv2.warpPerspective(img_bin, H, (0, 0))
         main_area = self.sweap_map(perspective_result)
         return main_area
@@ -263,7 +277,7 @@ class OCRHandle(object):
         self.index += 1
 
         CUT_PADDING = 10
-        MAX_RECT_DISTANCE = 200
+        MAX_RECT_DISTANCE = 70
 
         main_area = self.pre_process_img(raw_img)
         main_height = main_area.shape[0]
