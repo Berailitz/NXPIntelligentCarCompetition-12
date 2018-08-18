@@ -10,7 +10,7 @@ import struct
 import cv2
 import numpy as np
 import pytesseract
-from .config import IMAGE_SAMPLE_FOLDER, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES, OCR_DO_USE_NCS
+from .config import CAMERA_HEIGHT, CAMERA_WIDTH, IMAGE_SAMPLE_FOLDER, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES, OCR_DO_USE_NCS, STANDARD_LINE_WIDTH
 if OCR_DO_USE_NCS:
     from .config import NETWORK_GRAPH_FILENAME
     from .ncs import NCSDevice
@@ -75,8 +75,8 @@ class OCRHandle(object):
         ***WARNING: ASSUME THE CAMERA HEIGHT IS 640x480.***
         """
         y = dot_list[0][1]
-        SHORTEST_BOARDER = 35
-        LONGEST_BOARDER = 350
+        SHORTEST_BOARDER = 25
+        LONGEST_BOARDER = 200
         MAX_RATIO = 4
         result = False
         x_list = [dot[0] for dot in dot_list]
@@ -120,10 +120,10 @@ class OCRHandle(object):
     @staticmethod
     def draw_box(img, dot_list: list) -> None:
         dots = [tuple(dot) for dot in dot_list]
-        cv2.line(img, dots[0], dots[1], 200, 5)
-        cv2.line(img, dots[1], dots[2], 200, 5)
-        cv2.line(img, dots[2], dots[3], 200, 5)
-        cv2.line(img, dots[3], dots[0], 200, 5)
+        cv2.line(img, dots[0], dots[1], 200, STANDARD_LINE_WIDTH)
+        cv2.line(img, dots[1], dots[2], 200, STANDARD_LINE_WIDTH)
+        cv2.line(img, dots[2], dots[3], 200, STANDARD_LINE_WIDTH)
+        cv2.line(img, dots[3], dots[0], 200, STANDARD_LINE_WIDTH)
 
     @staticmethod
     def contour_to_rect(contour):
@@ -138,38 +138,20 @@ class OCRHandle(object):
 
     def sweap_map(self, img_bin):
         THRESHHOLD_GRAY_BLUR = 200
-        LINE_WIDTH = 5
-        map_height = img_bin.shape[0]
-        map_width = img_bin.shape[1]
+        CAMERA_HEIGHT = img_bin.shape[0]
+        CAMERA_WIDTH = img_bin.shape[1]
         flood_mask = np.zeros(
-            (map_height + 2, map_width + 2), np.uint8)
+            (CAMERA_HEIGHT + 2, CAMERA_WIDTH + 2), np.uint8)
 
-        triangle_3 = np.array([(0, round(0.82 * map_height)),
-                            (0, map_height - 1),
-                            (round(0.27 * map_width), map_height - 1)], dtype=np.int32)  # buttom-left-1
-        triangle_4 = np.array([(0, round(0.55 * map_height)),
-                            (0, map_height - 1),
-                            (round(0.08 * map_width), map_height - 1)], dtype=np.int32)  # buttom-left-2
-        triangle_5 = np.array([(round(0.2 * map_width), map_height - 1),
-                            (map_width - 1, round(0.47 * map_height)),
-                            (map_width - 1, map_height - 1)], dtype=np.int32)  # buttom-right
-        left_rect = np.array([(round(0.6 * map_width), map_height - 1),
-                            (round(0.6 * map_width), 0),
-                            (map_width - 1, 0),
-                            (map_width - 1, map_height - 1)], dtype=np.int32)
-        cv2.fillConvexPoly(img_bin, triangle_3, 255)
-        cv2.fillConvexPoly(img_bin, triangle_4, 255)
-        cv2.fillConvexPoly(img_bin, triangle_5, 255)
-        cv2.fillConvexPoly(img_bin, left_rect, 255)
-        cv2.line(img_bin, (1, map_height - LINE_WIDTH), (map_width - 1, map_height - LINE_WIDTH), 255, LINE_WIDTH)
-        cv2.line(img_bin, (1, LINE_WIDTH), (map_width - 1, LINE_WIDTH), 255, LINE_WIDTH)
-        cv2.line(img_bin, (1, round(0.5 * LINE_WIDTH)), (1, map_height - 1), 255, LINE_WIDTH)
-        cv2.line(img_bin, (map_width - 1, map_height - 1), (map_width - 1, map_height - 1), 255, LINE_WIDTH)
+        cv2.line(img_bin, (1, CAMERA_HEIGHT - STANDARD_LINE_WIDTH), (CAMERA_WIDTH - 1, CAMERA_HEIGHT - STANDARD_LINE_WIDTH), 255, STANDARD_LINE_WIDTH)
+        cv2.line(img_bin, (1, STANDARD_LINE_WIDTH), (CAMERA_WIDTH - 1, STANDARD_LINE_WIDTH), 255, STANDARD_LINE_WIDTH)
+        cv2.line(img_bin, (1, round(0.5 * STANDARD_LINE_WIDTH)), (1, CAMERA_HEIGHT - 1), 255, STANDARD_LINE_WIDTH)
+        cv2.line(img_bin, (CAMERA_WIDTH - 1, CAMERA_HEIGHT - 1), (CAMERA_WIDTH - 1, CAMERA_HEIGHT - 1), 255, STANDARD_LINE_WIDTH)
 
         if IS_WEB_VIDEO_ENABLED:
             self.videos['video-bin'] = img_bin.copy()
 
-        cv2.floodFill(img_bin, flood_mask, (1, round(0.5 * LINE_WIDTH)), 0)
+        cv2.floodFill(img_bin, flood_mask, (1, round(0.5 * STANDARD_LINE_WIDTH)), 0)
         img_bin_blur = cv2.blur(img_bin, (5, 5))
         retval, img_blur_bin = cv2.threshold(
             img_bin_blur, THRESHHOLD_GRAY_BLUR, 255, cv2.THRESH_BINARY)
@@ -240,10 +222,15 @@ class OCRHandle(object):
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        src = np.float32([[1, 141], [172, 385], [281, 95], [611, 146]])
+        src = np.float32([[172, 88], [64, 331], [490, 67], [921, 193]])
         H = self.get_H(src)
         perspective_result = cv2.warpPerspective(img_bin, H, (0, 0))
-        main_area = self.sweap_map(perspective_result)
+        M = cv2.getRotationMatrix2D((CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2), 90, 1)
+        real_perspective_result = cv2.warpAffine(
+            perspective_result, M, (CAMERA_WIDTH, CAMERA_HEIGHT))
+        perspective_result_cut = real_perspective_result[round(
+            CAMERA_HEIGHT * 0.35):, round(CAMERA_WIDTH * 0.35):round(CAMERA_WIDTH * 0.8)]
+        main_area = self.sweap_map(perspective_result_cut)
         return main_area
 
     @staticmethod
@@ -282,8 +269,8 @@ class OCRHandle(object):
         main_area = self.pre_process_img(raw_img)
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
-        STANDARD_X = round(main_width * 0.295)
-        STANDARD_Y = round(main_height * 0.52)
+        STANDARD_X = round(main_width * 0.41)
+        STANDARD_Y = round(main_height * 0.48)
         MAIN_CENTER = (STANDARD_X, STANDARD_Y)
         ANGLE_BASE = (STANDARD_X, main_height - 1)
         if IS_WEB_VIDEO_ENABLED:
@@ -318,9 +305,9 @@ class OCRHandle(object):
                 text_center = self.find_text_center(main_area, num_rects)
                 if IS_WEB_VIDEO_ENABLED:
                     cv2.line(self.videos['video-cut'],
-                            rect_a[0], rect_b[1], 200, 10)
+                            rect_a[0], rect_b[1], 200, STANDARD_LINE_WIDTH)
                     cv2.line(self.videos['video-cut'],
-                            rect_a[1], rect_b[0], 200, 10)
+                            rect_a[1], rect_b[0], 200, STANDARD_LINE_WIDTH)
                     for num_rect in num_rects:
                         self.draw_box(self.videos['video-cut'], num_rect)
                     self.videos['video-num-l'] = num_imgs[0]
@@ -334,7 +321,7 @@ class OCRHandle(object):
             rect_a = sorted_rects[0]
             if IS_WEB_VIDEO_ENABLED:
                 self.draw_box(self.videos['video-cut'], rect_a)
-                cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, 10)
+                cv2.line(self.videos['video-cut'], rect_a[0], rect_a[1], 200, STANDARD_LINE_WIDTH)
             text_center = self.get_center(rect_a)
             num_img = self.cut_rectangle(main_area, rect_a, CUT_PADDING)
             num_list = self.recognize_number([num_img])
@@ -354,9 +341,9 @@ class OCRHandle(object):
                 (text_center[0] - ANGLE_BASE[0]) / (text_center[1] - ANGLE_BASE[1])))
             if IS_WEB_VIDEO_ENABLED:
                 cv2.line(self.videos['video-cut'],
-                        text_center, MAIN_CENTER, 200, 10)
+                        text_center, MAIN_CENTER, 200, STANDARD_LINE_WIDTH)
                 cv2.line(self.videos['video-cut'],
-                        text_center, ANGLE_BASE, 200, 10)
+                        text_center, ANGLE_BASE, 200, STANDARD_LINE_WIDTH)
             SERIAL_START_OF_LINE = "by"
             SERIAL_PORT_LENGTH = 10
             SERIAL_PORT_TYPE = 0x0A
