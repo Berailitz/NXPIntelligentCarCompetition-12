@@ -222,7 +222,7 @@ class OCRHandle(object):
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        src = np.float32([[172, 88], [64, 331], [490, 67], [921, 193]])
+        src = np.float32([[107, 210], [415, 371], [355, 187], [635, 236]])
         H = self.get_H(src)
         perspective_result = cv2.warpPerspective(img_bin, H, (0, 0))
         M = cv2.getRotationMatrix2D((CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2), 90, 1)
