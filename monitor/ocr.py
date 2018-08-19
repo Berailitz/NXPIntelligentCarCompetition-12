@@ -77,7 +77,7 @@ class OCRHandle(object):
         y = dot_list[0][1]
         SHORTEST_BOARDER = 25
         LONGEST_BOARDER = 200
-        MAX_RATIO = 4
+        MAX_RATIO = 5
         result = False
         x_list = [dot[0] for dot in dot_list]
         y_list = [dot[1] for dot in dot_list]
@@ -218,19 +218,17 @@ class OCRHandle(object):
     def pre_process_img(self, raw_img):
         if IS_WEB_VIDEO_ENABLED:
             self.videos['video-raw'] = raw_img.copy()
-        THRESHHOLD_GRAY_MAIN = 165
+        THRESHHOLD_GRAY_MAIN = 150
         gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
         src = np.float32([[0, 56], [344, 258], [324, 17], [640, 76]])
         H = self.get_H(src)
-        perspective_result = cv2.warpPerspective(img_bin, H, (0, 0))
-        M = cv2.getRotationMatrix2D(
-            (CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2), 90, 1)
-        real_perspective_result = cv2.warpAffine(
-            perspective_result, M, (CAMERA_WIDTH, CAMERA_HEIGHT))
+        perspective_result_1 = cv2.warpPerspective(img_bin, H, (0, 0))
+        perspective_result_2 = cv2.transpose(perspective_result_1)
+        real_perspective_result = cv2.flip(perspective_result_2, 0)
         perspective_result_cut = real_perspective_result[round(
-            CAMERA_HEIGHT * 0.41):, round(CAMERA_WIDTH * 0.13):round(CAMERA_WIDTH * 0.54)]
+            CAMERA_HEIGHT * 0.5):, :round(CAMERA_WIDTH * 0.5)]
         main_area = self.sweap_map(perspective_result_cut)
         return main_area
 
