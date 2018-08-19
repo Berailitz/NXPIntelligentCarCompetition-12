@@ -200,35 +200,25 @@ class OCRHandle(object):
         x_max, y_max = rect_with_padding[2]
         return img[y_min:y_max, x_min:x_max]
 
-    def get_H(self, src_list):
-        left_up = src_list[0]
-        left_down = src_list[1]
-        right_up = src_list[2]
-        right_down = src_list[3]
-
-        dst = list()
-
-        dst.append([left_up[0], right_up[1]])
-        dst.append([left_up[0], left_down[1]])
-        dst.append([right_up[0], right_up[1]])
-        dst.append([right_up[0], left_down[1]])
-        dst = np.array(dst)
-        return cv2.getPerspectiveTransform(src_list, dst)
-
     def pre_process_img(self, raw_img):
+        src = np.float32([[0, 35], [450, 0], [750, 50], [400, 219]])
+        canvas = np.float32(
+            [[0, 0], [400, 0], [400, 400], [0, 400]])
+        H = cv2.getPerspectiveTransform(src, canvas)
+        wide_img = cv2.copyMakeBorder(
+            raw_img, 0, 0, 100, 0, cv2.BORDER_CONSTANT)
         if IS_WEB_VIDEO_ENABLED:
-            self.videos['video-raw'] = raw_img.copy()
-        THRESHHOLD_GRAY_MAIN = 150
-        gray = cv2.cvtColor(raw_img, cv2.COLOR_BGR2GRAY)
+            self.draw_box(wide_img, src)
+            self.videos['video-raw'] = wide_img.copy()
+        THRESHHOLD_GRAY_MAIN = 140
+        gray = cv2.cvtColor(wide_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        src = np.float32([[0, 56], [344, 258], [324, 17], [640, 76]])
-        H = self.get_H(src)
         perspective_result_1 = cv2.warpPerspective(img_bin, H, (0, 0))
         perspective_result_2 = cv2.transpose(perspective_result_1)
         real_perspective_result = cv2.flip(perspective_result_2, 0)
         perspective_result_cut = real_perspective_result[round(
-            CAMERA_HEIGHT * 0.5):, :round(CAMERA_WIDTH * 0.5)]
+            CAMERA_HEIGHT * 0.5):, :round(CAMERA_WIDTH * 0.8)]
         main_area = self.sweap_map(perspective_result_cut)
         return main_area
 
