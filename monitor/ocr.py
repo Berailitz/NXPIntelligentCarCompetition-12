@@ -248,7 +248,7 @@ class OCRHandle(ImageProcesser):
         return sorted_rects
 
     def analyse(self, raw_img):
-        self.status = {}
+        self.status = {'number': 99, 'x': 0, 'y': 0}
         self.videos = {}
         self.index += 1
 
