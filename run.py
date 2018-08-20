@@ -8,7 +8,7 @@ from monitor.app import WebProcess
 from monitor.bus import queues
 from monitor.camera_handler import CameraProcess
 from monitor.config import IS_WEB_ENABLED, IS_SERIAL_ENABLED, LOG_PATH, MAIN_CAMERA_ID
-from monitor.cross_finder import Crossfinder
+from monitor.cross_finder import Crossfinder, Chessfinder
 from monitor.mess import get_current_time, set_logger
 from monitor.serial_handler import SerialHandler
 from monitor.ocr import OCRHandle
@@ -27,6 +27,8 @@ def main():
         camera_process.start()
         cross_finder = Crossfinder(queues)
         cross_finder.start()
+        chess_finder = Chessfinder(queues)
+        chess_finder.start()
         ocr = OCRHandle(queues)
         ocr.initialize()
         ocr.start()
@@ -38,6 +40,7 @@ def main():
             queues['id_queue'].put(MAIN_CAMERA_ID)
         camera_process.join()
         cross_finder.join()
+        chess_finder.join()
         ocr.join()
         queues['bytes_queue'].put(None)
         serial_process.join()
@@ -50,6 +53,7 @@ def main():
             serial_process.terminate()
         camera_process.terminate()
         cross_finder.terminate()
+        chess_finder.terminate()
         ocr.terminate()
 
 

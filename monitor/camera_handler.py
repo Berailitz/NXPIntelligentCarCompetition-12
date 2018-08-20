@@ -4,7 +4,7 @@ import time
 import cv2
 from collections import defaultdict
 from multiprocessing import Process
-from .config import IS_SERIAL_ENABLED, IS_WEB_VIDEO_ENABLED, OCR_DO_USE_NCS, CAMERA_HEIGHT, CAMERA_WIDTH, SCAN_INTERVAL
+from .config import IS_SERIAL_ENABLED, IS_WEB_VIDEO_ENABLED, OCR_DO_USE_NCS, CAMERA_HEIGHT, CAMERA_WIDTH, SCAN_INTERVAL, CHESS_CAMERA_ID
 from .credentials import SERIAL_BAUDRATE, SERIAL_PORT
 from .ocr import OCRHandle
 
@@ -67,16 +67,22 @@ class CameraProcess(Process):
     def __init__(self, queues):
         super().__init__()
         self.camera = None
+        self.chess_camera = None
         self.queues = queues
 
     def open_camera(self, camera_id):
         self.camera = CameraUnit(camera_id)
         self.camera.open()
+        self.chess_camera = CameraUnit(CHESS_CAMERA_ID)
+        self.chess_camera.open()
 
     def close_camera(self):
         if self.camera is not None:
             self.camera.close()
             self.camera = None
+        if self.chess_camera is not None:
+            self.chess_camera.close()
+            self.chess_camera = None
 
     def run(self):
         print("Start camera process.")
@@ -96,4 +102,6 @@ class CameraProcess(Process):
                         frame = self.camera.get_frame()
                         self.queues['image_queue_a'].put(frame)
                         self.queues['image_queue_b'].put(frame)
+                        chess_frame = self.chess_camera.get_frame()
+                        self.queues['image_queue_c'].put(chess_frame)
         print("End camera process.")
