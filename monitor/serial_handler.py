@@ -7,7 +7,7 @@ from .config import IS_SERIAL_ENABLED, SERIAL_BAUDRATE, SERIAL_PORT
 
 class SerialHandler(Process):
     def __init__(self, queues):
-        super().__init__
+        super().__init__()
         self.ser = None
         self.queues = queues
 
