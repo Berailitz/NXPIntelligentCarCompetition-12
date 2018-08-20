@@ -8,6 +8,7 @@ camera_calibration/capture.jpg
 video_*.mp4
 sample.mp4
 test_result/
+opencv_hcm.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
