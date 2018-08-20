@@ -259,7 +259,7 @@ class OCRHandle(ImageProcesser):
         main_height = main_area.shape[0]
         main_width = main_area.shape[1]
         STANDARD_X = round(main_width * 0.41)
-        STANDARD_Y = round(main_height * 0.48)
+        STANDARD_Y = round(main_height * 0.61)
         MAIN_CENTER = (STANDARD_X, STANDARD_Y)
         ANGLE_BASE = (STANDARD_X, main_height - 1)
         if IS_WEB_VIDEO_ENABLED:
