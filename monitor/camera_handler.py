@@ -1,8 +1,9 @@
-from collections import defaultdict
 import base64
 import logging
+import time
 import cv2
-import serial
+from collections import defaultdict
+from multiprocessing import Process
 from .config import IS_SERIAL_ENABLED, IS_WEB_VIDEO_ENABLED, OCR_DO_USE_NCS, CAMERA_HEIGHT, CAMERA_WIDTH
 from .credentials import SERIAL_BAUDRATE, SERIAL_PORT
 from .ocr import OCRHandle
@@ -17,72 +18,82 @@ class CameraUnit(object):
         self.camera = None
         self.ocr_handle = None
         self.frame_index = 0
-        self.ser = None
 
-    def open(self):
+    def open_camera(self):
         self.camera = cv2.VideoCapture(self.video_id)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
-        self.ocr_handle = OCRHandle()
-        self.ocr_handle.initialize()
-        if IS_SERIAL_ENABLED:
-            logging.warning("Open serial port `{}` at baudrate `{}`.".format(SERIAL_PORT, SERIAL_BAUDRATE))
-            self.ser = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE)
+
+    def open(self):
+        self.open_camera()
         if not self.camera.isOpened():
             raise SystemError("Cannot open camera `{}`.".format(self.video_id))
 
-    def detect_video(self):
+    def get_frame(self):
         self.frame_index += 1
-        result = {'picture': '', 'status': {
-            'frame_index': self.frame_index, 'num': -1}}
         try:
             res, frame = self.camera.read()
             if res:
-                self.ocr_handle.analyse_img(frame)
-                result['status'] = self.ocr_handle.status
-                result['video'] = {}
-                try:
-                    if IS_SERIAL_ENABLED:
-                        self.ser.write(self.ocr_handle.serial_data)
-                    if IS_WEB_VIDEO_ENABLED:
-                        for label, video in self.ocr_handle.videos.items():
-                            retval, buffer = cv2.imencode('.jpg', video)
-                            result['video'][label] = base64.b64encode(buffer).decode('utf-8')
-                except:
-                    pass
+                return frame
             else:
                 logging.warning("No frame read.")
-                self.open()
+                self.close_camera()
+                self.open_camera()
+                return self.get_frame()
         except Exception as e:
             logging.exception(e)
-        return result
+        # return result
 
     def __del__(self):
         if self.camera is not None:
             self.camera.release()
-        if self.ser is not None:
-            self.ser.close()
         if self.ocr_handle is not None:
             self.ocr_handle.close()
 
-    def close(self):
+    def close_camera(self):
         logging.warning("Closing camera `{}`.".format(self.video_id))
         self.camera.release()
         self.camera = None
+
+    def close(self):
+        self.close_camera()
         if OCR_DO_USE_NCS:
             logging.warning("Closing NCS device.")
             self.ocr_handle.close()
             self.ocr_handle = None
-        if IS_SERIAL_ENABLED:
-            logging.warning("Closing serial port `{}`.".format(SERIAL_PORT))
-            self.ser.close()
-            self.ser = None
 
 
-class CameraHandler(defaultdict):
-    def __init__(self):
+class CameraProcess(Process):
+    def __init__(self, queues):
         super().__init__()
+        self.camera = None
+        self.queues = queues
 
-    def __missing__(self, video_id):
-        self[video_id] = CameraUnit(video_id)
-        return self[video_id]
+    def open_camera(self, camera_id):
+        self.camera = CameraUnit(camera_id)
+        self.camera.open()
+
+    def close_camera(self):
+        if self.camera is not None:
+            self.camera.close()
+            self.camera = None
+
+    def run(self):
+        print("Start camera process.")
+        while True:
+            time.sleep(0.05)
+            if not self.queues['id_queue'].empty():
+                camera_id = self.queues['id_queue'].get()
+                self.close_camera()
+                self.open_camera(camera_id)
+            if not self.queues['task_queue'].empty():
+                task = self.queues['task_queue'].get()
+                if task is None:
+                    self.close_camera()
+                    return
+                else:
+                    if self.camera is not None:
+                        frame = self.camera.get_frame()
+                        self.queues['image_queue_a'].put(frame)
+                        self.queues['image_queue_b'].put(frame)
+        print("End camera process.")

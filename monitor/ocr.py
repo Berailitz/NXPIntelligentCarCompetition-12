@@ -1,6 +1,7 @@
 #!/usr/env/python3
 # -*- coding: UTF-8 -*-
 
+import base64
 import functools
 import logging
 import math
@@ -18,11 +19,13 @@ else:
     from .config import DATASET_STANDARD_FOLDER
     from skimage.measure import compare_ssim as ssim
 from .credentials import NETWORK_IMAGE_DIMENSIONS
+from .image_processer import ImageProcesser
 from .mess import get_current_time
 
 
-class OCRHandle(object):
-    def __init__(self):
+class OCRHandle(ImageProcesser):
+    def __init__(self, queues):
+        super().__init__(queues, 'image_queue_a')
         self.orig = None
         self.cut = None
         self.index = 0
@@ -247,7 +250,7 @@ class OCRHandle(object):
                 self.draw_box(self.videos['video-cut'], possible_rect)
         return sorted_rects
 
-    def analyse_img(self, raw_img):
+    def analyse(self, raw_img):
         self.status = {}
         self.videos = {}
         self.index += 1
@@ -319,6 +322,7 @@ class OCRHandle(object):
             if IS_WEB_VIDEO_ENABLED:
                 self.videos['video-num-l'] = num_img
 
+        serial_data = b''
         if is_text_found:
             self.status['number'] = functools.reduce(lambda x, y: 10 * x + y[0], num_list, 0)
             # self.status['center'] = text_center
@@ -337,7 +341,7 @@ class OCRHandle(object):
             SERIAL_PORT_LENGTH = 10
             SERIAL_PORT_TYPE = 0x0A
             SERIAL_END_OF_LINE = "\r\n"
-            self.serial_data = SERIAL_START_OF_LINE.encode("ASCII")
+            self.serial_data += SERIAL_START_OF_LINE.encode("ASCII")
             self.serial_data += struct.pack('B', SERIAL_PORT_LENGTH)
             self.serial_data += struct.pack('B', SERIAL_PORT_TYPE)
             self.serial_data += struct.pack('B', self.status['number'])
@@ -345,3 +349,13 @@ class OCRHandle(object):
             self.serial_data += struct.pack('h', self.status['y'])
             self.serial_data += SERIAL_END_OF_LINE.encode('ASCII')
         logging.info("Result: {}".format(self.status))
+        self.write_serial(serial_data)
+        if IS_WEB_VIDEO_ENABLED:
+            result = {}
+            result['status'] = self.status
+            result['video'] = {}
+            for label, video in self.videos.items():
+                retval, buffer = cv2.imencode('.jpg', video)
+                result['video'][label] = base64.b64encode(
+                    buffer).decode('utf-8')
+            self.queues['ws_queue'].put(result)
