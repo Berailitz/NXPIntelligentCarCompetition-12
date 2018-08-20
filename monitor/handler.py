@@ -34,7 +34,8 @@ class SocketHandler(websocket.WebSocketHandler):
             index = 1
         if index % 100 == 0:
             logging.info('Sending frame `{}`.'.format(index))
-        queues['task_queue'].put(index)
+        if queues['task_queue'].qsize() <= 1:
+            queues['task_queue'].put(index)
         logging.info("Task size {}".format(queues['task_queue'].qsize()))
         self.write_message(json.dumps(queues['ws_queue'].get(), ensure_ascii=False))
 

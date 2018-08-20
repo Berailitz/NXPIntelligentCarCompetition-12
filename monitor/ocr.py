@@ -322,7 +322,7 @@ class OCRHandle(ImageProcesser):
             if IS_WEB_VIDEO_ENABLED:
                 self.videos['video-num-l'] = num_img
 
-        serial_data = b''
+        self.serial_data = b''
         if is_text_found:
             self.status['number'] = functools.reduce(lambda x, y: 10 * x + y[0], num_list, 0)
             # self.status['center'] = text_center
@@ -337,19 +337,19 @@ class OCRHandle(ImageProcesser):
                         text_center, MAIN_CENTER, 200, STANDARD_LINE_WIDTH)
                 cv2.line(self.videos['video-cut'],
                         text_center, ANGLE_BASE, 200, STANDARD_LINE_WIDTH)
-            SERIAL_START_OF_LINE = "by"
-            SERIAL_PORT_LENGTH = 10
+            SERIAL_START_OF_LINE = b"by"
+            SERIAL_PORT_LENGTH = 5
             SERIAL_PORT_TYPE = 0x0A
-            SERIAL_END_OF_LINE = "\r\n"
-            self.serial_data += SERIAL_START_OF_LINE.encode("ASCII")
+            SERIAL_END_OF_LINE = b"\r\n"
+            self.serial_data += SERIAL_START_OF_LINE
             self.serial_data += struct.pack('B', SERIAL_PORT_LENGTH)
             self.serial_data += struct.pack('B', SERIAL_PORT_TYPE)
             self.serial_data += struct.pack('B', self.status['number'])
             self.serial_data += struct.pack('h', self.status['x'])
             self.serial_data += struct.pack('h', self.status['y'])
-            self.serial_data += SERIAL_END_OF_LINE.encode('ASCII')
+            self.serial_data += SERIAL_END_OF_LINE
         logging.info("Result: {}".format(self.status))
-        self.write_serial(serial_data)
+        self.write_serial(self.serial_data)
         if IS_WEB_VIDEO_ENABLED:
             result = {}
             result['status'] = self.status

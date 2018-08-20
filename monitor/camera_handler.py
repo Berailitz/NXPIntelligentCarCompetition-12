@@ -100,8 +100,11 @@ class CameraProcess(Process):
                 else:
                     if self.camera is not None:
                         frame = self.camera.get_frame()
-                        self.queues['image_queue_a'].put(frame)
-                        self.queues['image_queue_b'].put(frame)
-                        chess_frame = self.chess_camera.get_frame()
-                        self.queues['image_queue_c'].put(chess_frame)
+                        if self.queues['image_queue_a'].qsize() <= 1:
+                            self.queues['image_queue_a'].put(frame)
+                        if self.queues['image_queue_b'].qsize() <= 1:
+                            self.queues['image_queue_b'].put(frame)
+                        if self.queues['image_queue_c'].qsize() <= 1:
+                            chess_frame = self.chess_camera.get_frame()
+                            self.queues['image_queue_c'].put(chess_frame)
         print("End camera process.")

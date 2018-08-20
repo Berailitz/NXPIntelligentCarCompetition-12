@@ -1,6 +1,7 @@
 from .credentials import *
 
 CHESS_CAMERA_ID = 1
+SERIAL_ALWAYS_HAS_TASK = False
 OCR_DO_USE_NCS = True
 IS_SERIAL_ENABLED = True
 IS_WEB_ENABLED = True

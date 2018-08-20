@@ -1,7 +1,8 @@
+import math
+import struct
+import time
 import cv2
 import numpy as np
-import time
-import math
 from .image_processer import ImageProcesser
 
 def get_H(src_list):
@@ -191,6 +192,9 @@ class Cross:
             else:
                 return False
 
+
+SRC = np.float32([[106, 153], [460, 476], [272, 109], [625, 277]])
+H = get_H(SRC)
 def get_cross5(image,getImg=True):
     height=int(image.shape[0])
     width=int(image.shape[1])
