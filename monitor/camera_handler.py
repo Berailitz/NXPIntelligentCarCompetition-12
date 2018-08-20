@@ -4,7 +4,7 @@ import time
 import cv2
 from collections import defaultdict
 from multiprocessing import Process
-from .config import IS_SERIAL_ENABLED, IS_WEB_VIDEO_ENABLED, OCR_DO_USE_NCS, CAMERA_HEIGHT, CAMERA_WIDTH
+from .config import IS_SERIAL_ENABLED, IS_WEB_VIDEO_ENABLED, OCR_DO_USE_NCS, CAMERA_HEIGHT, CAMERA_WIDTH, SCAN_INTERVAL
 from .credentials import SERIAL_BAUDRATE, SERIAL_PORT
 from .ocr import OCRHandle
 
@@ -81,7 +81,7 @@ class CameraProcess(Process):
     def run(self):
         print("Start camera process.")
         while True:
-            time.sleep(0.05)
+            time.sleep(SCAN_INTERVAL)
             if not self.queues['id_queue'].empty():
                 camera_id = self.queues['id_queue'].get()
                 self.close_camera()

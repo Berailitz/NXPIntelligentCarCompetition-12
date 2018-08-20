@@ -2,7 +2,7 @@ import logging
 import time
 import serial
 from multiprocessing import Process
-from .config import IS_SERIAL_ENABLED, SERIAL_BAUDRATE, SERIAL_PORT
+from .config import IS_SERIAL_ENABLED, SERIAL_BAUDRATE, SERIAL_PORT, SCAN_INTERVAL
 
 
 class SerialHandler(Process):
@@ -19,7 +19,7 @@ class SerialHandler(Process):
         if IS_SERIAL_ENABLED:
             self.ser = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE)
             while True:
-                time.sleep(0.05)
+                time.sleep(SCAN_INTERVAL)
                 if self.has_task():
                     self.queues['task_queue'].put(-1)
                 while not self.queues['bytes_queue'].empty():

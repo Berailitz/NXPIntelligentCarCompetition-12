@@ -7,7 +7,7 @@ import os
 from monitor.app import WebProcess
 from monitor.bus import queues
 from monitor.camera_handler import CameraProcess
-from monitor.config import IS_WEB_ENABLED, IS_SERIAL_ENABLED, LOG_PATH
+from monitor.config import IS_WEB_ENABLED, IS_SERIAL_ENABLED, LOG_PATH, MAIN_CAMERA_ID
 from monitor.cross_finder import Crossfinder
 from monitor.mess import get_current_time, set_logger
 from monitor.serial_handler import SerialHandler
@@ -33,6 +33,9 @@ def main():
         if IS_WEB_ENABLED:
             web_process = WebProcess()
             web_process.run()
+        else:
+            web_process = None
+            queues['id_queue'].put(MAIN_CAMERA_ID)
         camera_process.join()
         cross_finder.join()
         ocr.join()

@@ -1,5 +1,6 @@
 import time
 from multiprocessing import Process
+from .config import SCAN_INTERVAL
 
 
 class ImageProcesser(Process):
@@ -16,7 +17,7 @@ class ImageProcesser(Process):
 
     def run(self):
         while True:
-            time.sleep(0.05)
+            time.sleep(SCAN_INTERVAL)
             image = self.queues[self.image_queue_name].get()
             if image is not None:
                 self.analyse(image)
