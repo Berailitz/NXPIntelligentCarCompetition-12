@@ -204,24 +204,21 @@ class OCRHandle(ImageProcesser):
         return img[y_min:y_max, x_min:x_max]
 
     def pre_process_img(self, raw_img):
-        src = np.float32([[0, 35], [450, 0], [750, 50], [400, 219]])
-        canvas = np.float32(
-            [[0, 0], [400, 0], [400, 400], [0, 400]])
-        H = cv2.getPerspectiveTransform(src, canvas)
+        H = np.float32([[-3.64740463e+00, -4.30674316e+01, 5.46788040e+03],
+                        [8.06828600e+00, -4.86832172e+01, 1.29215652e+03],
+                        [4.12954301e-03, -9.02940812e-02, 1.00000000e+00]])
         wide_img = cv2.copyMakeBorder(
-            raw_img, 0, 0, 100, 0, cv2.BORDER_CONSTANT)
+            raw_img, 100, 0, 0, 150, cv2.BORDER_CONSTANT)
         if IS_WEB_VIDEO_ENABLED:
-            self.draw_box(wide_img, src)
             self.videos['video-raw'] = wide_img.copy()
+            src = np.float32([[94, 119], [401, 93], [757, 152], [517, 335]])
+            self.draw_box(self.videos['video-raw'], src)
         THRESHHOLD_GRAY_MAIN = 140
         gray = cv2.cvtColor(wide_img, cv2.COLOR_BGR2GRAY)
         retval, img_bin = cv2.threshold(
             gray, THRESHHOLD_GRAY_MAIN, 255, cv2.THRESH_BINARY)
-        perspective_result_1 = cv2.warpPerspective(img_bin, H, (0, 0))
-        perspective_result_2 = cv2.transpose(perspective_result_1)
-        real_perspective_result = cv2.flip(perspective_result_2, 0)
-        perspective_result_cut = real_perspective_result[round(
-            CAMERA_HEIGHT * 0.5):, :round(CAMERA_WIDTH * 0.8)]
+        perspective_result = cv2.warpPerspective(img_bin, H, (0, 0))
+        perspective_result_cut = perspective_result[:400, :400]
         main_area = self.sweap_map(perspective_result_cut)
         return main_area
 
