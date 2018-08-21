@@ -3,6 +3,7 @@ import datetime
 import functools
 import logging
 import logging.handlers
+import time
 
 get_current_time = lambda: datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')
 
@@ -17,6 +18,18 @@ def fun_logger(text='Fun_logger'):
             return result
         return wrapper
     return decorator
+
+
+def fun_timer(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kw):
+        start = time.time
+        result = func(*args, **kw)
+        end = time.time()
+        logging.info('`{}`: `{}`s.'.format(func.__name__, end - start))
+        return result
+    return wrapper
+
 
 def set_logger(log_path):
     """Adapt to Flask, log into log file at `log_path`, at level `INFO`"""

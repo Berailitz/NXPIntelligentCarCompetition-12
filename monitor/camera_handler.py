@@ -24,6 +24,9 @@ class CameraUnit(object):
         self.camera = cv2.VideoCapture(self.video_id)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
+        self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 10)
+        for i in range(20):
+            self.camera.read()
 
     def open(self):
         self.open_camera()
@@ -111,9 +114,9 @@ class CameraProcess(Process):
                         if self.queues['image_queue_a'].qsize() <= 1:
                             self.queues['image_queue_a'].put(frame.copy())
                         if self.queues['image_queue_b'].qsize() <= 1:
-                            self.queues['image_queue_b'].put(frame.copy())
+                            self.queues['image_queue_b'].put(frame)
                     if self.chess_camera is not None:
                         chess_frame = self.chess_camera.get_frame()
                         if self.queues['image_queue_c'].qsize() <= 1:
-                            self.queues['image_queue_c'].put(chess_frame.copy())
+                            self.queues['image_queue_c'].put(chess_frame)
         logging.warning("End `{}` process at PID `{}`.".format(self.__class__.__name__, os.getpid()))
