@@ -94,9 +94,11 @@ class CameraProcess(Process):
         logging.warning("Start `{}` process at PID `{}`.".format(self.__class__.__name__, os.getpid()))
         self.open_camera()
         while True:
+            time.sleep(STANDARD_BASE_INTERVAL)
+            self.real_frame_index += 1
             is_queue_a_needed = self.queues['image_queue_a'].qsize() <= 1
             is_queue_b_needed = self.queues['image_queue_b'].qsize() <= 1
-            if is_queue_a_needed or is_queue_b_needed:
+            if is_queue_a_needed or is_queue_b_needed or self.real_frame_index % 8 == 0:
                 frame = self.camera.get_frame()
                 if is_queue_a_needed and is_queue_b_needed:
                     self.queues['image_queue_a'].put(frame.copy())
@@ -104,11 +106,11 @@ class CameraProcess(Process):
                 else:
                     if is_queue_a_needed:
                         self.queues['image_queue_a'].put(frame)
-                    else:
-                        # is_queue_b_needed == True
+                    if is_queue_b_needed:
                         self.queues['image_queue_b'].put(frame)
             is_queue_c_needed = self.queues['image_queue_c'].qsize() <= 1 # c -> chess_camera
-            if is_queue_c_needed:
+            if is_queue_c_needed or self.real_frame_index % 8 == 0:
                 chess_frame = self.chess_camera.get_frame()
-                self.queues['image_queue_c'].put(chess_frame)
+                if is_queue_c_needed:
+                    self.queues['image_queue_c'].put(chess_frame)
         logging.warning("End `{}` process at PID `{}`.".format(self.__class__.__name__, os.getpid()))

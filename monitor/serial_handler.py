@@ -30,7 +30,7 @@ class SerialHandler(Process):
                     if new_bytes is None:
                         break
                     else:
-                        logging.info("Serial: `{}`".format(binascii.hexlify(new_bytes)))
+                        logging.debug("Serial: `{}`".format(binascii.hexlify(new_bytes)))
                         self.ser.write(new_bytes)
             logging.warning("Closing serial port `{}`.".format(SERIAL_PORT))
             self.ser.close()

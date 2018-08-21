@@ -79,7 +79,7 @@ class OCRHandle(ImageProcesser):
         """
         y = dot_list[0][1]
         SHORTEST_BOARDER = 25
-        LONGEST_BOARDER = 200
+        LONGEST_BOARDER = 250
         MAX_RATIO = 5
         result = False
         x_list = [dot[0] for dot in dot_list]
