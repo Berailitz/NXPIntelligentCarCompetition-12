@@ -98,12 +98,7 @@ class CameraProcess(Process):
                 camera_id = self.queues['id_queue'].get()
                 self.close_camera()
                 self.open_camera(camera_id)
-            if self.queues['task_queue'].empty():
-                if self.camera is not None and self.real_frame_index % 8 == 0:
-                    self.camera.get_frame()
-                if self.chess_camera is not None and self.real_frame_index % 8 == 0:
-                    self.chess_camera.get_frame()
-            else:
+            if not self.queues['task_queue'].empty():
                 task = self.queues['task_queue'].get()
                 if task is None:
                     self.close_camera()
