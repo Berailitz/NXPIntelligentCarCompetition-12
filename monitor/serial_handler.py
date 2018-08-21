@@ -1,9 +1,10 @@
 import binascii
 import logging
+import os
 import time
 import serial
 from multiprocessing import Process
-from .config import IS_SERIAL_ENABLED, SERIAL_BAUDRATE, SERIAL_PORT, SCAN_INTERVAL, SERIAL_ALWAYS_HAS_TASK
+from .config import IS_SERIAL_ENABLED, SERIAL_BAUDRATE, SERIAL_PORT, STANDARD_BASE_INTERVAL, SERIAL_ALWAYS_HAS_TASK
 
 
 class SerialHandler(Process):
@@ -16,11 +17,12 @@ class SerialHandler(Process):
         return SERIAL_ALWAYS_HAS_TASK
 
     def run(self):
+        logging.warning("Start `{}` process at PID `{}`.".format(self.__class__.__name__, os.getpid()))
         logging.warning("Open serial port `{}` at baudrate `{}`.".format(SERIAL_PORT, SERIAL_BAUDRATE))
         if IS_SERIAL_ENABLED:
             self.ser = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE)
             while True:
-                time.sleep(SCAN_INTERVAL)
+                time.sleep(STANDARD_BASE_INTERVAL)
                 if self.has_task() and self.queues['task_queue'].qsize() <= 1:
                     self.queues['task_queue'].put(-1)
                 while not self.queues['bytes_queue'].empty():
