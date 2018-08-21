@@ -26,7 +26,11 @@ def fun_timer(func):
         start = time.time()
         result = func(*args, **kw)
         end = time.time()
-        logging.info('`{}`: `{}`s.'.format(func.__name__, end - start))
+        if hasattr(func, '__self__'):
+            prefix = func.__self__.__class__.__name__
+        else:
+            prefix = 'fuction'
+        logging.info('`{}.{}`: `{}`s.'.format(prefix, func.__name__, end - start))
         return result
     return wrapper
 
