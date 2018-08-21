@@ -5,7 +5,7 @@ import time
 import cv2
 from collections import defaultdict
 from multiprocessing import Process
-from .config import IS_SERIAL_ENABLED, IS_WEB_VIDEO_ENABLED, OCR_DO_USE_NCS, CAMERA_HEIGHT, CAMERA_WIDTH, STANDARD_BASE_INTERVAL, CHESS_CAMERA_ID
+from .config import IS_SERIAL_ENABLED, IS_WEB_VIDEO_ENABLED, OCR_DO_USE_NCS, CAMERA_HEIGHT, CAMERA_WIDTH, STANDARD_BASE_INTERVAL, CHESS_CAMERA_ID, MAIN_CAMERA_ID
 from .credentials import SERIAL_BAUDRATE, SERIAL_PORT
 from .ocr import OCRHandle
 
@@ -75,8 +75,8 @@ class CameraProcess(Process):
         self.queues = queues
         self.real_frame_index = 0
 
-    def open_camera(self, camera_id):
-        self.camera = CameraUnit(camera_id)
+    def open_camera(self):
+        self.camera = CameraUnit(MAIN_CAMERA_ID)
         self.camera.open()
         self.chess_camera = CameraUnit(CHESS_CAMERA_ID)
         self.chess_camera.open()
@@ -92,26 +92,19 @@ class CameraProcess(Process):
 
     def run(self):
         logging.warning("Start `{}` process at PID `{}`.".format(self.__class__.__name__, os.getpid()))
+        self.open_camera()
         while True:
-            time.sleep(STANDARD_BASE_INTERVAL)
-            if not self.queues['id_queue'].empty():
-                camera_id = self.queues['id_queue'].get()
+            task = self.queues['task_queue'].get()
+            if task is None:
                 self.close_camera()
-                self.open_camera(camera_id)
-            if not self.queues['task_queue'].empty():
-                task = self.queues['task_queue'].get()
-                if task is None:
-                    self.close_camera()
-                    return
-                else:
-                    if self.camera is not None:
-                        frame = self.camera.get_frame()
-                        if self.queues['image_queue_a'].qsize() <= 1:
-                            self.queues['image_queue_a'].put(frame.copy())
-                        if self.queues['image_queue_b'].qsize() <= 1:
-                            self.queues['image_queue_b'].put(frame)
-                    if self.chess_camera is not None:
-                        chess_frame = self.chess_camera.get_frame()
-                        if self.queues['image_queue_c'].qsize() <= 1:
-                            self.queues['image_queue_c'].put(chess_frame)
+                return
+            else:
+                frame = self.camera.get_frame()
+                if self.queues['image_queue_a'].qsize() <= 1:
+                    self.queues['image_queue_a'].put(frame.copy())
+                if self.queues['image_queue_b'].qsize() <= 1:
+                    self.queues['image_queue_b'].put(frame)
+                chess_frame = self.chess_camera.get_frame()
+                if self.queues['image_queue_c'].qsize() <= 1:
+                    self.queues['image_queue_c'].put(chess_frame)
         logging.warning("End `{}` process at PID `{}`.".format(self.__class__.__name__, os.getpid()))
