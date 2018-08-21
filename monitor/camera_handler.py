@@ -24,7 +24,7 @@ class CameraUnit(object):
         self.camera = cv2.VideoCapture(self.video_id)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
-        self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 10)
+        self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         for i in range(20):
             self.camera.read()
 
