@@ -23,7 +23,7 @@ def fun_logger(text='Fun_logger'):
 def fun_timer(func):
     @functools.wraps(func)
     def wrapper(*args, **kw):
-        start = time.time
+        start = time.time()
         result = func(*args, **kw)
         end = time.time()
         logging.info('`{}`: `{}`s.'.format(func.__name__, end - start))
