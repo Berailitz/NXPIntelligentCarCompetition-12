@@ -5,7 +5,7 @@
 
 import os
 from tornado import httpserver, web
-from .config import SSL_CERT_FILE, SSL_KEY_FILE, SERVER_PORT, SERVER_ADDRESS
+from .config import SERVER_PORT, SERVER_ADDRESS
 from .handler import IndexHandler, SocketHandler
 from .mess import get_current_time, set_logger
 
