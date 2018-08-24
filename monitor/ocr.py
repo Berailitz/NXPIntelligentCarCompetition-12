@@ -3,6 +3,7 @@
 
 import functools
 import logging
+import time
 import math
 import operator
 import os
@@ -10,15 +11,10 @@ import struct
 import cv2
 import numpy as np
 import pytesseract
-from .config import CAMERA_HEIGHT, CAMERA_WIDTH, IMAGE_SAMPLE_FOLDER, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES, OCR_DO_USE_NCS, STANDARD_LINE_WIDTH
+from .config import CAMERA_HEIGHT, CAMERA_WIDTH, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES, OCR_DO_USE_NCS, STANDARD_LINE_WIDTH
 from .credentials import NETWORK_IMAGE_DIMENSIONS
 from .mess import get_current_time
 
-
-import matplotlib.pyplot as plt
-import matplotlib.image as mplimg
-import numpy as np
-import cv2
 
 blur_ksize = 5  # Gaussian blur kernel size
 canny_lthreshold = 50  # Canny edge detection low threshold
@@ -81,8 +77,7 @@ class OCRHandle(object):
 
 
     @staticmethod
-    def get_line_in_ab(line: tuple) -> tuple():
-        r, theta = line
+    def get_line_in_ab(r, theta) -> tuple():
         result = None
         if theta == 0:
             result = (0, 0)
@@ -104,17 +99,20 @@ class OCRHandle(object):
         vert_lines = []
         hori_lines = []
         for line in lines:
-            x1,y1,x2,y2 = line
-            theta = (y1 - y2) / (x1 - x2)
-            r = 
+            x1,y1,x2,y2 = line[0]
+            theta = math.atan((y1 - y2) / (x1 - x2))
+            if x1 == x2:
+                r = 0
+            else:
+                r = (y1 * (x1 - x2) - x1 * (y1 - y2)) / (x1 - x2) * math.cos(theta)
             if theta < np.pi * 0.25 or theta > np.pi * 0.75:
                 # 竖线
                 is_duplicate = self.check_line_duplication(
                     vert_lines, r, theta)
                 if not is_duplicate:
-                    vert_lines.append(line[0])
-                    a, b = self.get_line_in_ab(line[0])
-                    cv2.line(self.videos['video-raw'], *self.get_line_tuple(r,
+                    vert_lines.append((r, theta))
+                    a, b = self.get_line_in_ab(r, theta)
+                    cv2.line(self.videos['video-cut'], *self.get_line_tuple(r,
                                                              theta), (200, 0, 0), 2)
                     # print(f"Vert: {(r,theta)}, y = {a} * x + {b}")
         return sorted(vert_lines, key=self.get_line_angle)
@@ -124,8 +122,6 @@ class OCRHandle(object):
         self.videos = {}
         self.videos['video-raw'] = raw_img
         self.status = {}
-        self.status['right'] = None
-        self.status['left'] = None
         gray = cv2.cvtColor(raw_img, cv2.COLOR_RGB2GRAY)    # 图像转换为灰度图
         kernel = np.ones((5, 5), np.uint8)
         closing = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
@@ -133,11 +129,11 @@ class OCRHandle(object):
             closing, (blur_ksize, blur_ksize), 0, 0)    # 使用高斯模糊去噪声
         edges = cv2.Canny(blur_gray, canny_lthreshold,
                           canny_hthreshold)    # 使用Canny进行边缘检测
-        cv2.imwrite(f"ertfghjklkj{time.time()}.jpg", edges)
         self.videos['video-bin'] = edges
+        self.videos['video-cut'] = closing
         lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array(
             []), minLineLength=min_line_length, maxLineGap=max_line_gap)  # 函数输出的直接就是一组直线点的坐标位置（每条直线用两个点表示[x1,y1],[x2,y2]）
-        real_lines = self.filter_lines(lines)
-        self.videos['video-cut'] = edges.copy()
-        for real_line in real_lines:
-            cv2.line(self.videos['video-cut'],*self.get_line_tuple(**real_lines))
+        if lines is not None:
+            real_lines = self.filter_lines(lines)
+            for real_line in real_lines:
+                cv2.line(closing, *self.get_line_tuple(real_line[0], real_line[1]), 255, 20)
