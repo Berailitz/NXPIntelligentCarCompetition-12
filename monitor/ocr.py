@@ -11,12 +11,6 @@ import cv2
 import numpy as np
 import pytesseract
 from .config import CAMERA_HEIGHT, CAMERA_WIDTH, IMAGE_SAMPLE_FOLDER, IS_WEB_VIDEO_ENABLED, DO_SAVE_IMAGE_SAMPLES, OCR_DO_USE_NCS, STANDARD_LINE_WIDTH
-if OCR_DO_USE_NCS:
-    from .config import NETWORK_GRAPH_FILENAME
-    from .ncs import NCSDevice
-else:
-    from .config import DATASET_STANDARD_FOLDER
-    from skimage.measure import compare_ssim as ssim
 from .credentials import NETWORK_IMAGE_DIMENSIONS
 from .mess import get_current_time
 
@@ -38,93 +32,6 @@ min_line_length = 40  # 线的最短长度，比这个短的都被忽略
 max_line_gap = 20  # 两条直线之间的最大间隔，小于此值，认为是一条直线
 
 
-def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
-    for line in lines:
-        for x1, y1, x2, y2 in line:
-            cv2.line(img, (x1, y1), (x2, y2), color, thickness)
-
-
-def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
-  lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array(
-      []), minLineLength=min_line_len, maxLineGap=max_line_gap)  # 函数输出的直接就是一组直线点的坐标位置（每条直线用两个点表示[x1,y1],[x2,y2]）
-  line_img = np.zeros((img.shape[0], img.shape[1], 3),
-                      dtype=np.uint8)  # 生成绘制直线的绘图板，黑底
-  # draw_lines(line_img, lines)
-  draw_lanes(line_img, lines)
-  return line_img
-
-
-def draw_lanes(img, lines, color=[255, 0, 0], thickness=8):
-    if lines is None:
-        return
-    left_lines, right_lines = [], []    # 用于存储左边和右边的直线
-    for line in lines:    # 对直线进行分类
-        for x1, y1, x2, y2 in line:
-            k = (y2 - y1) / (x2 - x1)
-            if k < 0:
-                left_lines.append(line)
-            else:
-                right_lines.append(line)
-
-    if (len(left_lines) <= 0 or len(right_lines) <= 0):
-        return img
-
-    clean_lines(left_lines, 0.1)    # 弹出左侧不满足斜率要求的直线
-    clean_lines(right_lines, 0.1)    # 弹出右侧不满足斜率要求的直线
-    left_points = [(x1, y1) for line in left_lines for x1,
-                                 y1, x2, y2 in line]    # 提取左侧直线族中的所有的第一个点
-    left_points = left_points + \
-            [(x2, y2) for line in left_lines for x1,
-             y1, x2, y2 in line]    # 提取左侧直线族中的所有的第二个点
-    right_points = [(x1, y1) for line in right_lines for x1,
-                                    y1, x2, y2 in line]    # 提取右侧直线族中的所有的第一个点
-    right_points = right_points + \
-            [(x2, y2) for line in right_lines for x1,
-             y1, x2, y2 in line]    # 提取右侧侧直线族中的所有的第二个点
-
-    # 拟合点集，生成直线表达式，并计算左侧直线在图像中的两个端点的坐标
-    left_vtx = calc_lane_vertices(left_points, 0, img.shape[0])
-    # 拟合点集，生成直线表达式，并计算右侧直线在图像中的两个端点的坐标
-    right_vtx = calc_lane_vertices(right_points, 0, img.shape[0])
-
-    cv2.line(img, left_vtx[0], left_vtx[1], color, thickness)    # 画出直线
-    cv2.line(img, right_vtx[0], right_vtx[1], color, thickness)    # 画出直线
-
-#将不满足斜率要求的直线弹出
-
-
-def clean_lines(lines, threshold):
-    slope = []
-    for line in lines:
-        for x1, y1, x2, y2 in line:
-            k = (y2-y1)/(x2-x1)
-            slope.append(k)
-    #slope = [(y2 - y1) / (x2 - x1) for line in lines for x1, y1, x2, y2 in line]
-    while len(lines) > 0:
-        mean = np.mean(slope)  # 计算斜率的平均值，因为后面会将直线和斜率值弹出
-        diff = [abs(s - mean) for s in slope]  # 计算每条直线斜率与平均值的差值
-        idx = np.argmax(diff)  # 计算差值的最大值的下标
-        if diff[idx] > threshold:  # 将差值大于阈值的直线弹出
-          slope.pop(idx)  # 弹出斜率
-          lines.pop(idx)  # 弹出直线
-        else:
-          break
-
-#拟合点集，生成直线表达式，并计算直线在图像中的两个端点的坐标
-
-
-def calc_lane_vertices(point_list, ymin, ymax):
-    x = [p[0] for p in point_list]    # 提取x
-    y = [p[1] for p in point_list]    # 提取y
-    fit = np.polyfit(y, x, 1)    # 用一次多项式x=a*y+b拟合这些点，fit是(a,b)
-    fit_fn = np.poly1d(fit)    # 生成多项式对象a*y+b
-
-    xmin = int(fit_fn(ymin))    # 计算这条直线在图像中最左侧的横坐标
-    xmax = int(fit_fn(ymax))    # 计算这条直线在图像中最右侧的横坐标
-
-    return [(xmin, ymin), (xmax, ymax)]
-
-
 class OCRHandle(object):
     def __init__(self):
         self.index = 0
@@ -138,16 +45,99 @@ class OCRHandle(object):
     def close(self):
         pass
 
+
+    def get_line_tuple(self, r, theta) -> tuple:
+        a = np.cos(theta)
+        # Stores the value of sin(theta) in b
+        b = np.sin(theta)
+        # x0 stores the value rcos(theta)
+        x0 = a*r
+        # y0 stores the value rsin(theta)
+        y0 = b*r
+        # x1 stores the rounded off value of (rcos(theta)-1000sin(theta))
+        x1 = int(x0 + 1000*(-b))
+        # y1 stores the rounded off value of (rsin(theta)+1000cos(theta))
+        y1 = int(y0 + 1000*(a))
+        # x2 stores the rounded off value of (rcos(theta)+1000sin(theta))
+        x2 = int(x0 - 1000*(-b))
+        # y2 stores the rounded off value of (rsin(theta)-1000cos(theta))
+        y2 = int(y0 - 1000*(a))
+        # cv2.line draws a line in img from the point(x1,y1) to (x2,y2).
+        # (0,0,255) denotes the colour of the line to be
+        #drawn. In this case, it is red.
+        return ((x1, y1), (x2, y2))
+
+
+    def check_line_duplication(self, current_list: list, new_r, new_theta) -> bool:
+        is_duplicate = False
+        min_gap_r = 40
+        min_gap_theta = 0.2
+        for current_line in current_list:
+            current_r, current_theta = current_line
+            if abs(current_r - new_r) < min_gap_r and abs(new_theta - current_theta) < min_gap_theta:
+                is_duplicate = True
+                break
+        return is_duplicate
+
+
+    @staticmethod
+    def get_line_in_ab(line: tuple) -> tuple():
+        r, theta = line
+        result = None
+        if theta == 0:
+            result = (0, 0)
+        else:
+            result = (- 1.0 / math.tan(theta), r / math.sin(theta))
+        return result
+
+
+    @staticmethod
+    def get_line_angle(line: tuple) -> float:
+        r, theta = line
+        if theta < np.pi * 0.5:
+            return theta + np.pi * 0.5
+        else:
+            return theta - np.pi * 0.5
+
+
+    def filter_lines(self, lines: list) -> tuple:
+        vert_lines = []
+        hori_lines = []
+        for line in lines:
+            x1,y1,x2,y2 = line
+            theta = (y1 - y2) / (x1 - x2)
+            r = 
+            if theta < np.pi * 0.25 or theta > np.pi * 0.75:
+                # 竖线
+                is_duplicate = self.check_line_duplication(
+                    vert_lines, r, theta)
+                if not is_duplicate:
+                    vert_lines.append(line[0])
+                    a, b = self.get_line_in_ab(line[0])
+                    cv2.line(self.videos['video-raw'], *self.get_line_tuple(r,
+                                                             theta), (200, 0, 0), 2)
+                    # print(f"Vert: {(r,theta)}, y = {a} * x + {b}")
+        return sorted(vert_lines, key=self.get_line_angle)
+
+
     def analyse_img(self, raw_img):
         self.videos = {}
-        gray = cv2.cvtColor(raw_img, cv2.COLOR_RGB2GRAY)    # 图像转换为灰度图
-        blur_gray = cv2.GaussianBlur(
-                gray, (blur_ksize, blur_ksize), 0, 0)    # 使用高斯模糊去噪声
-        edges = cv2.Canny(blur_gray, canny_lthreshold,
-                                            canny_hthreshold)    # 使用Canny进行边缘检测
-        line_img = hough_lines(edges, rho, theta, threshold,
-                                                    min_line_length, max_line_gap)    # 使用霍夫直线检测，并且绘制直线
-        result = cv2.addWeighted(raw_img, 0.8, line_img, 1, 0)    # 将处理后的图像与原图做融合
-        self.videos['video-cut'] = result
         self.videos['video-raw'] = raw_img
+        self.status = {}
+        self.status['right'] = None
+        self.status['left'] = None
+        gray = cv2.cvtColor(raw_img, cv2.COLOR_RGB2GRAY)    # 图像转换为灰度图
+        kernel = np.ones((5, 5), np.uint8)
+        closing = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+        blur_gray = cv2.GaussianBlur(
+            closing, (blur_ksize, blur_ksize), 0, 0)    # 使用高斯模糊去噪声
+        edges = cv2.Canny(blur_gray, canny_lthreshold,
+                          canny_hthreshold)    # 使用Canny进行边缘检测
+        cv2.imwrite(f"ertfghjklkj{time.time()}.jpg", edges)
         self.videos['video-bin'] = edges
+        lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array(
+            []), minLineLength=min_line_length, maxLineGap=max_line_gap)  # 函数输出的直接就是一组直线点的坐标位置（每条直线用两个点表示[x1,y1],[x2,y2]）
+        real_lines = self.filter_lines(lines)
+        self.videos['video-cut'] = edges.copy()
+        for real_line in real_lines:
+            cv2.line(self.videos['video-cut'],*self.get_line_tuple(**real_lines))
