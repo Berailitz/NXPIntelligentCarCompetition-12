@@ -66,7 +66,7 @@ class OCRHandle(object):
 
     def check_line_duplication(self, current_list: list, new_r, new_theta) -> bool:
         is_duplicate = False
-        min_gap_r = 80
+        min_gap_r = 40
         min_gap_theta = 0.2
         for current_line in current_list:
             current_r, current_theta = current_line
@@ -114,23 +114,25 @@ class OCRHandle(object):
 
 
     def analyse_img(self, raw_img):
-        self.videos = {}
-        self.videos['video-raw'] = raw_img
+        if IS_WEB_VIDEO_ENABLED:
+            self.videos = {}
+            self.videos['video-raw'] = raw_img
         self.status = {}
         gray = cv2.cvtColor(raw_img, cv2.COLOR_RGB2GRAY)    # 图像转换为灰度图
-        kernel = np.ones((5, 5), np.uint8)
-        closing_1 = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
         blur_gray = cv2.GaussianBlur(
-            closing_1, (5, 55), 0, 0)    # 使用高斯模糊去噪声
-        self.videos['video-cut'] = blur_gray.copy()
+            gray, (5, 35), 0, 0)    # 使用高斯模糊去噪声
+        if IS_WEB_VIDEO_ENABLED:
+            self.videos['video-cut'] = blur_gray.copy()
         edges = cv2.Canny(blur_gray, 50, 150)    # 使用Canny进行边缘检测
-        self.videos['video-bin'] = edges.copy()
+        if IS_WEB_VIDEO_ENABLED:
+            self.videos['video-bin'] = edges.copy()
         lines = cv2.HoughLines(edges, 1, np.pi/180, 90)
         if lines is not None:
             real_lines = self.filter_lines(lines)
             if real_lines is not None:
-                print("{}->{}".format(len(lines), len(real_lines)))
-                for real_line in real_lines:
-                    line_points = self.get_line_tuple(real_line[0], real_line[1])
-                    # print(line_points)
-                    cv2.line(self.videos['video-raw'], *line_points, (0, 0, 255), 20)
+                logging.info("{}->{}".format(len(lines), len(real_lines)))
+                if IS_WEB_VIDEO_ENABLED:
+                    for real_line in real_lines:
+                        line_points = self.get_line_tuple(real_line[0], real_line[1])
+                        # print(line_points)
+                        cv2.line(self.videos['video-raw'], *line_points, (0, 0, 255), 20)
