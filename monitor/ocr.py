@@ -51,13 +51,13 @@ class OCRHandle(object):
         # y0 stores the value rsin(theta)
         y0 = b*r
         # x1 stores the rounded off value of (rcos(theta)-1000sin(theta))
-        x1 = int(x0 + 10000*(-b))
+        x1 = int(x0 + 1000*(-b))
         # y1 stores the rounded off value of (rsin(theta)+1000cos(theta))
-        y1 = int(y0 + 10000*(a))
+        y1 = int(y0 + 1000*(a))
         # x2 stores the rounded off value of (rcos(theta)+1000sin(theta))
-        x2 = int(x0 - 10000*(-b))
+        x2 = int(x0 - 1000*(-b))
         # y2 stores the rounded off value of (rsin(theta)-1000cos(theta))
-        y2 = int(y0 - 10000*(a))
+        y2 = int(y0 - 1000*(a))
         # cv2.line draws a line in img from the point(x1,y1) to (x2,y2).
         # (0,0,255) denotes the colour of the line to be
         #drawn. In this case, it is red.
@@ -99,13 +99,7 @@ class OCRHandle(object):
         vert_lines = []
         hori_lines = []
         for line in lines:
-            x1,y1,x2,y2 = line[0]
-            if x1 == x2:
-                theta = 0
-                r = x1
-            else:
-                theta = np.pi / 2 - math.atan((y1 - y2) / (x1 - x2))
-                r = (y1 * (x1 - x2) - x1 * (y1 - y2)) / (x1 - x2) * math.sin(theta)
+            r, theta = line[0]
             if theta < np.pi * 0.25 or theta > np.pi * 0.75:
                 # 竖线
                 is_duplicate = self.check_line_duplication(
@@ -125,27 +119,26 @@ class OCRHandle(object):
         self.status = {}
         gray = cv2.cvtColor(raw_img, cv2.COLOR_RGB2GRAY)    # 图像转换为灰度图
         kernel = np.ones((5, 5), np.uint8)
-        closing = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+        closing_1 = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
         blur_gray = cv2.GaussianBlur(
-            closing, (blur_ksize, blur_ksize), 0, 0)    # 使用高斯模糊去噪声
-        edges = cv2.Canny(blur_gray, canny_lthreshold,
-                          canny_hthreshold)    # 使用Canny进行边缘检测
-        self.videos['video-bin'] = edges
-        self.videos['video-cut'] = raw_img.copy()
-        lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array(
-            []), minLineLength=min_line_length, maxLineGap=max_line_gap)  # 函数输出的直接就是一组直线点的坐标位置（每条直线用两个点表示[x1,y1],[x2,y2]）
+            closing_1, (5, 5), 0, 0)    # 使用高斯模糊去噪声
+        edges = cv2.Canny(blur_gray, 50,
+                  150)    # 使用Canny进行边缘检测
+        kernel = np.ones((35, 35), np.uint8)
+        closing_2 = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+        blur = cv2.GaussianBlur(closing_2, (3, 3), 0, 0)
+        retval, cut_bin = cv2.threshold(
+                        blur, 2, 255, cv2.THRESH_BINARY)
+        self.videos['video-bin'] = cut_bin.copy()
+        self.videos['video-cut'] = blur.copy()
+        self.videos['video-num-l'] = edges.copy()
+        self.videos['video-num-r'] = closing_2.copy()
+        lines = cv2.HoughLines(cut_bin, 1, np.pi/180, 150)
         if lines is not None:
-            self.videos['num-l'] = raw_img.copy()
-            line_counter = 0
-            for x1, y1, x2, y2 in lines[0]:
-                cv2.line(self.videos['num-l'], (x1, y1), (x2, y2), (0, 0, 255), 2)
-                line_counter += 1
-            print(line_counter)
-
             real_lines = self.filter_lines(lines)
             if real_lines is not None:
                 print("{}->{}".format(len(lines), len(real_lines)))
                 for real_line in real_lines:
                     line_points = self.get_line_tuple(real_line[0], real_line[1])
-                    print(line_points)
-                    cv2.line(self.videos['video-cut'], *line_points, (0, 0, 255), 20)
+                    # print(line_points)
+                    cv2.line(self.videos['video-raw'], *line_points, (0, 0, 255), 20)
