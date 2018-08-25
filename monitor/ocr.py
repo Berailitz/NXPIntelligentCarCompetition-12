@@ -66,7 +66,7 @@ class OCRHandle(object):
 
     def check_line_duplication(self, current_list: list, new_r, new_theta) -> bool:
         is_duplicate = False
-        min_gap_r = 40
+        min_gap_r = 80
         min_gap_theta = 0.2
         for current_line in current_list:
             current_r, current_theta = current_line
@@ -100,7 +100,7 @@ class OCRHandle(object):
         hori_lines = []
         for line in lines:
             r, theta = line[0]
-            if theta < np.pi * 0.25 or theta > np.pi * 0.75:
+            if theta < np.pi * 0.15 or theta > np.pi * 0.85:
                 # 竖线
                 is_duplicate = self.check_line_duplication(
                     vert_lines, r, theta)
@@ -121,19 +121,11 @@ class OCRHandle(object):
         kernel = np.ones((5, 5), np.uint8)
         closing_1 = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
         blur_gray = cv2.GaussianBlur(
-            closing_1, (5, 5), 0, 0)    # 使用高斯模糊去噪声
-        edges = cv2.Canny(blur_gray, 50,
-                  150)    # 使用Canny进行边缘检测
-        kernel = np.ones((35, 35), np.uint8)
-        closing_2 = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
-        blur = cv2.GaussianBlur(closing_2, (3, 3), 0, 0)
-        retval, cut_bin = cv2.threshold(
-                        blur, 2, 255, cv2.THRESH_BINARY)
-        self.videos['video-bin'] = cut_bin.copy()
-        self.videos['video-cut'] = blur.copy()
-        self.videos['video-num-l'] = edges.copy()
-        self.videos['video-num-r'] = closing_2.copy()
-        lines = cv2.HoughLines(cut_bin, 1, np.pi/180, 150)
+            closing_1, (5, 55), 0, 0)    # 使用高斯模糊去噪声
+        self.videos['video-cut'] = blur_gray.copy()
+        edges = cv2.Canny(blur_gray, 50, 150)    # 使用Canny进行边缘检测
+        self.videos['video-bin'] = edges.copy()
+        lines = cv2.HoughLines(edges, 1, np.pi/180, 90)
         if lines is not None:
             real_lines = self.filter_lines(lines)
             if real_lines is not None:
