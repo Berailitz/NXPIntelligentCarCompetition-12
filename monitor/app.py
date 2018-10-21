@@ -22,9 +22,12 @@ def create_app(log_path='log'):
         ],
         static_path=os.path.join(os.path.dirname(__file__), "static"),
         template_path=os.path.join(os.path.dirname(__file__), "templates"))
-    http_server = httpserver.HTTPServer(app, ssl_options={
-        "certfile": SSL_CERT_FILE,
-        "keyfile": SSL_KEY_FILE,
-    })
-    http_server.listen(port=SERVER_PORT, address=SERVER_ADDRESS)
+    if SSL_CERT_FILE is None or SSL_KEY_FILE is None:
+        app.listen(port=SERVER_PORT, address=SERVER_ADDRESS)
+    else:
+        http_server = httpserver.HTTPServer(app, ssl_options={
+            "certfile": SSL_CERT_FILE,
+            "keyfile": SSL_KEY_FILE,
+        })
+        http_server.listen(port=SERVER_PORT, address=SERVER_ADDRESS)
     return app
